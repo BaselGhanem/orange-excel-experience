@@ -433,9 +433,15 @@
   <div id="toast" class="status-toast"></div>
 
   <script type="module">
-    import { initializeApp } from `https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`;
-    import { getAnalytics, isSupported } from `https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js`;
-    import { getFirestore, doc, setDoc, getDocs, collection, serverTimestamp } from `https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`;
+    const [firebaseAppModule, firebaseAnalyticsModule, firebaseFirestoreModule] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js`),
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
+    ]);
+
+    const { initializeApp } = firebaseAppModule;
+    const { getAnalytics, isSupported } = firebaseAnalyticsModule;
+    const { getFirestore, doc, setDoc, getDocs, collection, serverTimestamp } = firebaseFirestoreModule;
 
     const firebaseConfig = {
       apiKey: `AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,
@@ -967,13 +973,11 @@
 
     const init = () => {
       if (view === `results`) {
-        el(`participantView`).classList.add(`hidden`);
-        el(`resultsView`).classList.remove(`hidden`);
-        loadResults();
-      } else {
-        setModeUI();
-        loadStoredName();
+        window.location.replace(`admin/`);
+        return;
       }
+      setModeUI();
+      loadStoredName();
       lucide.createIcons();
     };
 

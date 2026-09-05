@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CODERZ × Orange | Assessment Admin</title>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root{
+      --dark:#374550;--blue:#147EEA;--blue-soft:#EEF6FE;--orange:#FF7900;--orange-dark:#F16E00;
+      --ink:#25313B;--muted:#6B7782;--line:#E5EAF0;--surface:#FAFBFC;--white:#fff;--green:#50BE87;
+      --red:#D64545;--red-soft:#FFF1F1;--yellow:#FFF7CC;--shadow:0 18px 55px rgba(31,45,56,.12);
+    }
+    *{box-sizing:border-box} body{margin:0;background:#F5F7F9;color:var(--ink);font-family:Arial,"Segoe UI",sans-serif}
+    button,input,select{font:inherit}.hidden{display:none!important}.app{min-height:100vh}
+    .topbar{background:var(--dark);color:#fff;padding:14px 20px;position:sticky;top:0;z-index:30;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+    .topbar-inner{max-width:1280px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.2px}.brand .x{color:var(--orange)}
+    .top-actions{display:flex;gap:9px;flex-wrap:wrap}.container{max-width:1280px;margin:0 auto;padding:24px 18px 48px}
+    .hero{background:linear-gradient(135deg,#fff 0%,#F8FBFF 70%);border:1px solid var(--line);border-radius:28px;padding:26px;box-shadow:var(--shadow);margin-bottom:20px}
+    .hero h1{margin:0 0 8px;font-size:clamp(25px,3vw,42px);color:var(--dark)}.hero p{margin:0;color:var(--muted);line-height:1.8}
+    .badge{display:inline-flex;align-items:center;gap:7px;background:var(--blue-soft);color:var(--blue);padding:7px 11px;border-radius:999px;font-size:12px;font-weight:900;margin-bottom:12px}
+    .btn{border:0;border-radius:14px;padding:11px 15px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:.18s;text-decoration:none}
+    .btn:hover{transform:translateY(-1px)}.btn-dark{background:var(--dark);color:#fff}.btn-blue{background:var(--blue);color:#fff}.btn-orange{background:var(--orange);color:#fff}
+    .btn-ghost{background:#fff;color:var(--dark);border:1px solid var(--line)}.btn-danger{background:var(--red);color:#fff}.btn-small{padding:8px 10px;border-radius:10px;font-size:12px}
+    .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 8px 24px rgba(31,45,56,.06)}
+    .metric span{font-size:12px;color:var(--muted);font-weight:800}.metric b{display:block;font-size:28px;margin-top:5px;color:var(--dark)}.metric.blue b{color:var(--blue)}.metric.orange b{color:var(--orange)}.metric.green b{color:#2D8B61}
+    .toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}.toolbar-group{display:flex;gap:8px;flex-wrap:wrap}
+    .search{min-width:270px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 13px;outline:none}.search:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}
+    .table-card{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 8px 24px rgba(31,45,56,.06)}.table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:1060px}th{background:var(--dark);color:#fff;font-size:12px;text-align:center;padding:13px 10px;white-space:nowrap}td{border-bottom:1px solid #EDF0F2;padding:12px 10px;text-align:center;font-size:13px}td.name{text-align:right;font-weight:900;color:var(--dark);min-width:185px}
+    tr:hover td{background:#FBFCFD}.pill{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-weight:900}.pill.post{background:#FFF3E8;color:var(--orange-dark)}.gain.pos{color:#208556;font-weight:900}.gain.neg{color:var(--red);font-weight:900}
+    .actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.empty{padding:42px;text-align:center;color:var(--muted)}
+    .login-shell{min-height:100vh;display:grid;place-items:center;padding:20px}.login-card{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:var(--shadow)}
+    .pin{width:100%;font-size:28px;letter-spacing:12px;text-align:center;direction:ltr;border:1px solid var(--line);border-radius:16px;padding:14px;outline:none;margin:15px 0}.pin:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}
+    .login-card h1{margin:0;color:var(--dark)}.login-card p{color:var(--muted);line-height:1.7}.error{color:var(--red);font-size:13px;font-weight:700;min-height:20px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(24,33,40,.62);display:grid;place-items:center;padding:18px;z-index:100}.modal{width:min(650px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:24px;padding:23px;box-shadow:0 28px 80px rgba(0,0,0,.28)}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}.modal-head h2{margin:0;color:var(--dark)}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:900;color:var(--muted)}.field input,.field select{border:1px solid var(--line);border-radius:12px;padding:11px;outline:none}.field input:focus{border-color:var(--blue)}
+    .notice{background:#FFF8EA;border:1px solid #FFE1A6;color:#77571B;border-radius:16px;padding:13px;font-size:12px;line-height:1.7;margin-top:14px}.danger-zone{margin-top:22px;background:var(--red-soft);border:1px solid #FFD5D5;border-radius:20px;padding:18px}.danger-zone h3{margin:0 0 6px;color:var(--red)}
+    .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--dark);color:#fff;padding:11px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:200}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.search{min-width:100%;width:100%}.toolbar{align-items:stretch}.toolbar-group{width:100%}}
+    @media(max-width:520px){.summary{grid-template-columns:1fr}.container{padding:16px 12px 40px}.hero{padding:20px;border-radius:22px}.btn{width:100%}.top-actions{width:100%}}
+  </style>
+</head>
+<body>
+  <div id="loginView" class="login-shell">
+    <div class="login-card">
+      <div class="badge"><i data-lucide="shield-check" size="16"></i> TRAINER ADMIN</div>
+      <h1>CODERZ × Orange</h1>
+      <p>لوحة إدارة نتائج التقييم المبدئي والنهائي. أدخل رمز الإدارة للمتابعة.</p>
+      <input id="pinInput" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" />
+      <div id="loginError" class="error"></div>
+      <button id="loginBtn" class="btn btn-dark" style="width:100%"><i data-lucide="log-in" size="18"></i> دخول</button>
+    </div>
+  </div>
+
+  <div id="adminView" class="app hidden">
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">CODERZ <span class="x">×</span> Orange | Assessment Admin</div>
+        <div class="top-actions">
+          <a class="btn btn-ghost btn-small" href="../?mode=pre"><i data-lucide="clipboard-list" size="15"></i> Pre</a>
+          <a class="btn btn-ghost btn-small" href="../?mode=post"><i data-lucide="trending-up" size="15"></i> Post</a>
+          <button id="logoutBtn" class="btn btn-orange btn-small"><i data-lucide="log-out" size="15"></i> خروج</button>
+        </div>
+      </div>
+    </div>
+
+    <main class="container">
+      <section class="hero">
+        <div class="badge"><i data-lucide="bar-chart-3" size="16"></i> LIVE RESULTS CONTROL</div>
+        <h1>Pre / Post Assessment</h1>
+        <p>عرض، تعديل، حذف، وإعادة ضبط نتائج المشاركين. حذف محاولة Pre أو Post يسمح لك بتنظيف النتيجة وإعادة التقييم عند الحاجة.</p>
+      </section>
+
+      <section class="summary">
+        <div class="card metric"><span>Participants</span><b id="mParticipants">0</b></div>
+        <div class="card metric blue"><span>Average Pre</span><b id="mPre">—</b></div>
+        <div class="card metric orange"><span>Average Post</span><b id="mPost">—</b></div>
+        <div class="card metric green"><span>Average Gain</span><b id="mGain">—</b></div>
+        <div class="card metric"><span>Paired</span><b id="mPaired">0</b></div>
+      </section>
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button id="refreshBtn" class="btn btn-blue"><i data-lucide="refresh-cw" size="17"></i> تحديث</button>
+          <button id="exportBtn" class="btn btn-ghost"><i data-lucide="download" size="17"></i> CSV</button>
+        </div>
+        <input id="searchInput" class="search" type="search" placeholder="ابحث باسم المشارك..." />
+      </div>
+
+      <section class="table-card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Participant</th><th>Pre</th><th>Post</th><th>Gain</th><th>Foundation</th><th>Applied</th><th>Advanced</th><th>Updated</th><th>Controls</th></tr></thead>
+            <tbody id="rowsBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty hidden">لا توجد نتائج بعد.</div>
+      </section>
+
+      <section class="danger-zone">
+        <h3>Danger Zone</h3>
+        <p>حذف جميع النتائج نهائي من Firestore. سيطلب منك رمز الإدارة مرة أخرى قبل التنفيذ.</p>
+        <button id="deleteAllBtn" class="btn btn-danger"><i data-lucide="trash-2" size="17"></i> حذف جميع النتائج</button>
+      </section>
+    </main>
+  </div>
+
+  <div id="editBackdrop" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head"><h2>تعديل النتيجة</h2><button id="closeEditBtn" class="btn btn-ghost btn-small">إغلاق</button></div>
+      <div class="grid2">
+        <div class="field"><label>First Name</label><input id="editFirst" /></div>
+        <div class="field"><label>Last Name</label><input id="editLast" /></div>
+        <div class="field"><label>Mode</label><input id="editMode" disabled /></div>
+        <div class="field"><label>Total Score / 15</label><input id="editScore" type="number" min="0" max="15" /></div>
+        <div class="field"><label>Foundation / 5</label><input id="editFoundation" type="number" min="0" max="5" /></div>
+        <div class="field"><label>Applied / 5</label><input id="editApplied" type="number" min="0" max="5" /></div>
+        <div class="field"><label>Advanced / 5</label><input id="editAdvanced" type="number" min="0" max="5" /></div>
+        <div class="field"><label>Document ID</label><input id="editDocId" disabled /></div>
+      </div>
+      <div class="notice">تعديل العلامة من لوحة الإدارة هو Override يدوي. إجابات الأسئلة الأصلية تبقى محفوظة كما هي.</div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button id="saveEditBtn" class="btn btn-blue"><i data-lucide="save" size="17"></i> حفظ التعديل</button>
+        <button id="deleteAttemptBtn" class="btn btn-danger"><i data-lucide="trash-2" size="17"></i> حذف هذه المحاولة</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    const [firebaseAppModule, firebaseFirestoreModule] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
+    ]);
+
+    const { initializeApp } = firebaseAppModule;
+    const { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } = firebaseFirestoreModule;
+
+    const firebaseConfig = {
+      apiKey: `AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,
+      authDomain: `mobilehub-4eb1d.firebaseapp.com`,
+      projectId: `mobilehub-4eb1d`,
+      storageBucket: `mobilehub-4eb1d.firebasestorage.app`,
+      messagingSenderId: `13420871425`,
+      appId: `1:13420871425:web:e253fe9c5aebbc5925a500`,
+      measurementId: `G-RYWYCQXBT8`
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const COLLECTION = `orangeExcelAssessments`;
+    const ADMIN_SESSION = `coderzOrangeAdminSession`;
+    const ADMIN_PIN_HASH = `9060ce5653093cd9bff480cb01ff0e3a790e6f545e214a3dd85841daabac7848`;
+
+    const state = { attempts: [], people: [], editing: null };
+    const el = (id) => document.getElementById(id);
+
+    const sha256 = async (value) => {
+      const bytes = new TextEncoder().encode(value);
+      const digest = await crypto.subtle.digest(`SHA-256`, bytes);
+      return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, `0`)).join(``);
+    };
+
+    const showToast = (message) => {
+      const toast = el(`toast`);
+      toast.textContent = message;
+      toast.classList.add(`show`);
+      setTimeout(() => toast.classList.remove(`show`), 2400);
+    };
+
+    const authorized = () => sessionStorage.getItem(ADMIN_SESSION) === `1`;
+    const showAdmin = () => {
+      el(`loginView`).classList.add(`hidden`);
+      el(`adminView`).classList.remove(`hidden`);
+      lucide.createIcons();
+      loadResults();
+    };
+
+    const login = async () => {
+      const pin = el(`pinInput`).value.trim();
+      if (await sha256(pin) !== ADMIN_PIN_HASH) {
+        el(`loginError`).textContent = `رمز الإدارة غير صحيح.`;
+        el(`pinInput`).value = ``;
+        return;
+      }
+      sessionStorage.setItem(ADMIN_SESSION, `1`);
+      el(`loginError`).textContent = ``;
+      showAdmin();
+    };
+
+    const safeDate = (value) => {
+      if (!value) return null;
+      if (value.toDate) return value.toDate();
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const avg = (arr) => arr.length ? (arr.reduce((a,b) => a+b, 0) / arr.length).toFixed(1) : `—`;
+
+    const buildPeople = (attempts) => {
+      const map = new Map();
+      attempts.forEach((attempt) => {
+        const key = attempt.participantKey || attempt.id;
+        if (!map.has(key)) map.set(key, { key, fullName: attempt.fullName || `${attempt.firstName || ``} ${attempt.lastName || ``}`.trim(), pre: null, post: null });
+        const person = map.get(key);
+        if (attempt.mode === `pre` || attempt.mode === `post`) person[attempt.mode] = attempt;
+        if (attempt.fullName) person.fullName = attempt.fullName;
+      });
+      return [...map.values()].sort((a,b) => a.fullName.localeCompare(b.fullName, `ar`));
+    };
+
+    const updateMetrics = () => {
+      const pre = state.people.filter((p) => p.pre).map((p) => Number(p.pre.score || 0));
+      const post = state.people.filter((p) => p.post).map((p) => Number(p.post.score || 0));
+      const paired = state.people.filter((p) => p.pre && p.post);
+      const gains = paired.map((p) => Number(p.post.score || 0) - Number(p.pre.score || 0));
+      el(`mParticipants`).textContent = state.people.length;
+      el(`mPre`).textContent = pre.length ? `${avg(pre)}/15` : `—`;
+      el(`mPost`).textContent = post.length ? `${avg(post)}/15` : `—`;
+      el(`mGain`).textContent = gains.length ? `${Number(avg(gains)) > 0 ? `+` : ``}${avg(gains)}` : `—`;
+      el(`mPaired`).textContent = paired.length;
+    };
+
+    const scoreCell = (attempt, post = false) => attempt ? `<span class="pill${post ? ` post` : ``}">${attempt.score}/15</span>` : `—`;
+    const sectionCell = (pre, post, field) => `${pre ? pre[field] : `—`} / ${post ? post[field] : `—`}`;
+
+    const renderRows = () => {
+      const q = el(`searchInput`).value.trim().toLowerCase();
+      const body = el(`rowsBody`);
+      body.innerHTML = ``;
+      const people = state.people.filter((p) => !q || p.fullName.toLowerCase().includes(q));
+      el(`emptyState`).classList.toggle(`hidden`, people.length > 0);
+
+      people.forEach((person) => {
+        const pre = person.pre;
+        const post = person.post;
+        const delta = pre && post ? Number(post.score || 0) - Number(pre.score || 0) : null;
+        const latest = [pre,post].filter(Boolean).map((x) => safeDate(x.submittedAt || x.clientSubmittedAt)).filter(Boolean).sort((a,b) => b-a)[0];
+        const tr = document.createElement(`tr`);
+        tr.innerHTML = `
+          <td class="name">${person.fullName || `—`}</td>
+          <td>${scoreCell(pre)}</td>
+          <td>${scoreCell(post,true)}</td>
+          <td class="gain ${delta === null ? `` : delta >= 0 ? `pos` : `neg`}">${delta === null ? `—` : `${delta > 0 ? `+` : ``}${delta}`}</td>
+          <td>${sectionCell(pre,post,`foundationScore`)}</td>
+          <td>${sectionCell(pre,post,`appliedScore`)}</td>
+          <td>${sectionCell(pre,post,`advancedScore`)}</td>
+          <td>${latest ? latest.toLocaleString(`en-GB`,{day:`2-digit`,month:`short`,hour:`2-digit`,minute:`2-digit`}) : `—`}</td>
+          <td><div class="actions">
+            ${pre ? `<button class="btn btn-ghost btn-small" data-edit="${pre.id}">Edit Pre</button>` : ``}
+            ${post ? `<button class="btn btn-ghost btn-small" data-edit="${post.id}">Edit Post</button>` : ``}
+            <button class="btn btn-danger btn-small" data-delete-person="${person.key}">Delete Person</button>
+          </div></td>`;
+        body.appendChild(tr);
+      });
+
+      body.querySelectorAll(`[data-edit]`).forEach((button) => button.addEventListener(`click`, () => openEdit(button.dataset.edit)));
+      body.querySelectorAll(`[data-delete-person]`).forEach((button) => button.addEventListener(`click`, () => deletePerson(button.dataset.deletePerson)));
+      lucide.createIcons();
+    };
+
+    const loadResults = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, COLLECTION));
+        state.attempts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+        state.people = buildPeople(state.attempts);
+        updateMetrics();
+        renderRows();
+        showToast(`تم تحديث النتائج.`);
+      } catch (error) {
+        console.error(error);
+        showToast(`تعذر قراءة النتائج. راجع Firestore Rules.`);
+      }
+    };
+
+    const openEdit = (id) => {
+      const attempt = state.attempts.find((a) => a.id === id);
+      if (!attempt) return;
+      state.editing = attempt;
+      el(`editFirst`).value = attempt.firstName || ``;
+      el(`editLast`).value = attempt.lastName || ``;
+      el(`editMode`).value = attempt.mode || ``;
+      el(`editScore`).value = Number(attempt.score ?? 0);
+      el(`editFoundation`).value = Number(attempt.foundationScore ?? 0);
+      el(`editApplied`).value = Number(attempt.appliedScore ?? 0);
+      el(`editAdvanced`).value = Number(attempt.advancedScore ?? 0);
+      el(`editDocId`).value = attempt.id;
+      el(`editBackdrop`).classList.remove(`hidden`);
+      lucide.createIcons();
+    };
+
+    const closeEdit = () => {
+      state.editing = null;
+      el(`editBackdrop`).classList.add(`hidden`);
+    };
+
+    const clampInt = (value, min, max) => Math.max(min, Math.min(max, Number.parseInt(value,10) || 0));
+    const scoreLevel = (score) => score <= 5 ? `Beginner` : score <= 10 ? `Intermediate` : `Advanced`;
+
+    const saveEdit = async () => {
+      if (!state.editing) return;
+      const firstName = el(`editFirst`).value.trim();
+      const lastName = el(`editLast`).value.trim();
+      const score = clampInt(el(`editScore`).value,0,15);
+      const foundationScore = clampInt(el(`editFoundation`).value,0,5);
+      const appliedScore = clampInt(el(`editApplied`).value,0,5);
+      const advancedScore = clampInt(el(`editAdvanced`).value,0,5);
+      if (!firstName || !lastName) return showToast(`الاسم الأول واسم العائلة مطلوبان.`);
+      await updateDoc(doc(db,COLLECTION,state.editing.id),{
+        firstName,lastName,fullName:`${firstName} ${lastName}`,score,foundationScore,appliedScore,advancedScore,level:scoreLevel(score),adminEditedAt:new Date().toISOString()
+      });
+      closeEdit();
+      await loadResults();
+      showToast(`تم حفظ التعديل.`);
+    };
+
+    const deleteAttempt = async () => {
+      if (!state.editing) return;
+      if (!confirm(`حذف محاولة ${state.editing.mode?.toUpperCase()} لـ ${state.editing.fullName || ``}؟`)) return;
+      await deleteDoc(doc(db,COLLECTION,state.editing.id));
+      closeEdit();
+      await loadResults();
+      showToast(`تم حذف المحاولة.`);
+    };
+
+    const deletePerson = async (participantKey) => {
+      const person = state.people.find((p) => p.key === participantKey);
+      if (!person) return;
+      if (!confirm(`حذف جميع نتائج ${person.fullName} (Pre + Post)؟`)) return;
+      const targets = [person.pre,person.post].filter(Boolean);
+      await Promise.all(targets.map((attempt) => deleteDoc(doc(db,COLLECTION,attempt.id))));
+      await loadResults();
+      showToast(`تم حذف نتائج المشارك.`);
+    };
+
+    const deleteAll = async () => {
+      const pin = prompt(`للتأكيد النهائي، اكتب رمز الإدارة:`) || ``;
+      if (await sha256(pin.trim()) !== ADMIN_PIN_HASH) return showToast(`رمز الإدارة غير صحيح.`);
+      if (!confirm(`سيتم حذف جميع نتائج Pre وPost نهائياً. هل أنت متأكد؟`)) return;
+      await Promise.all(state.attempts.map((attempt) => deleteDoc(doc(db,COLLECTION,attempt.id))));
+      await loadResults();
+      showToast(`تم حذف جميع النتائج.`);
+    };
+
+    const exportCsv = () => {
+      if (!state.people.length) return;
+      const data = [[`Participant`,`Pre`,`Post`,`Gain`,`Foundation Pre`,`Foundation Post`,`Applied Pre`,`Applied Post`,`Advanced Pre`,`Advanced Post`]];
+      state.people.forEach((p) => {
+        const gain = p.pre && p.post ? Number(p.post.score)-Number(p.pre.score) : ``;
+        data.push([p.fullName,p.pre?.score ?? ``,p.post?.score ?? ``,gain,p.pre?.foundationScore ?? ``,p.post?.foundationScore ?? ``,p.pre?.appliedScore ?? ``,p.post?.appliedScore ?? ``,p.pre?.advancedScore ?? ``,p.post?.advancedScore ?? ``]);
+      });
+      const csv = data.map((row) => row.map((value) => `"${String(value).replaceAll(`"`,`""`)}"`).join(`,`)).join(`\n`);
+      const blob = new Blob([`\uFEFF${csv}`],{type:`text/csv;charset=utf-8;`});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement(`a`);
+      a.href=url;a.download=`Orange_Excel_Pre_Post_Results.csv`;a.click();URL.revokeObjectURL(url);
+    };
+
+    el(`loginBtn`).addEventListener(`click`,login);
+    el(`pinInput`).addEventListener(`keydown`,(event)=>{if(event.key===`Enter`)login();});
+    el(`logoutBtn`).addEventListener(`click`,()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload();});
+    el(`refreshBtn`).addEventListener(`click`,loadResults);
+    el(`exportBtn`).addEventListener(`click`,exportCsv);
+    el(`searchInput`).addEventListener(`input`,renderRows);
+    el(`closeEditBtn`).addEventListener(`click`,closeEdit);
+    el(`saveEditBtn`).addEventListener(`click`,saveEdit);
+    el(`deleteAttemptBtn`).addEventListener(`click`,deleteAttempt);
+    el(`deleteAllBtn`).addEventListener(`click`,deleteAll);
+    el(`editBackdrop`).addEventListener(`click`,(event)=>{if(event.target===el(`editBackdrop`))closeEdit();});
+
+    if (authorized()) showAdmin();
+    lucide.createIcons();
+  </script>
+</body>
+</html>

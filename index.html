@@ -685,11 +685,11 @@
         <div class="assessment-facts">
           <span>15 Questions</span>
           <span>Beginner → Intermediate → Advanced</span>
-          <span>Pre / Post Comparison</span>
+          <span>قياس التطور</span>
           <span>≈ 10–12 Minutes</span>
         </div>
         <button id="assessmentButton" class="btn btn-primary assessment-link"><i data-lucide="play" size="18"></i> ابدأ التقييم المبدئي</button>
-        <div id="assessmentNote" class="assessment-note">استخدم نفس الاسم في التقييمين حتى تظهر المقارنة بشكل صحيح.</div>
+        <div id="assessmentNote" class="assessment-note">التقييم النهائي سيفتح في آخر يوم من التدريب.</div>
       </div>
     </div>
   </section>
@@ -763,7 +763,7 @@
         title.textContent = `خلونا نشوف الفرق.`;
         desc.textContent = `نفس معيار القياس، لكن بعد التدريب. الهدف نشوف التغيّر الفعلي بالمستوى ونقارن النتيجة مع أول يوم.`;
         assessmentButton.innerHTML = `<i data-lucide="play" size="18"></i> ابدأ التقييم النهائي`;
-        note.textContent = `استخدم نفس الاسم الذي سجلت فيه أول يوم حتى تظهر مقارنة Pre / Post.`;
+        note.textContent = `إذا ظهر اسمك تلقائياً، أكمل مباشرة وابدأ التقييم النهائي.`;
       } else if (phase === `closed`) {
         eyebrow.innerHTML = `<i data-lucide="lock-keyhole" size="16"></i> Assessment`;
         title.textContent = `التقييم مغلق حالياً.`;
@@ -775,7 +775,7 @@
         title.textContent = `خلونا نشوف مستواكم.`;
         desc.textContent = `15 سؤال سريع يعطينا صورة واضحة عن المستوى الحالي، حتى نضبط سرعة التدريب ونستفيد من الوقت بأفضل شكل.`;
         assessmentButton.innerHTML = `<i data-lucide="play" size="18"></i> ابدأ التقييم المبدئي`;
-        note.textContent = `استخدم نفس الاسم في التقييمين حتى تظهر المقارنة بشكل صحيح.`;
+        note.textContent = `التقييم النهائي سيفتح في آخر يوم من التدريب.`;
       }
       assessmentButton.disabled = !enabled;
       assessmentButton.style.opacity = enabled ? `1` : `.55`;

@@ -323,7 +323,7 @@
 
         <section id="identityPanel" class="panel">
           <h2 class="panel-title">بيانات المشارك</h2>
-          <p class="panel-sub">اكتب الاسم الأول واسم العائلة. سيتم حفظهما على هذا الجهاز تلقائياً حتى لا تحتاج لإعادة كتابتهما في التقييم اللاحق.</p>
+          <p class="panel-sub">اكتب الاسم الأول واسم العائلة كما تريد ظهورهما في النتيجة.</p>
           <div class="identity-grid">
             <div class="field">
               <label for="firstName">الاسم الأول</label>
@@ -334,7 +334,6 @@
               <input id="lastName" class="input" type="text" autocomplete="family-name" placeholder="Last name" />
             </div>
           </div>
-          <div class="remember-note"><i data-lucide="shield-check" size="16"></i> الاسم يُحفظ محلياً على جهازك، والنتيجة تُخزن في Firebase لعرض مقارنة Pre / Post.</div>
           <div style="margin-top:20px">
             <button id="startBtn" class="btn btn-primary btn-wide"><i data-lucide="arrow-left" size="18"></i> بدء التقييم</button>
           </div>
@@ -376,7 +375,7 @@
 
         <section id="resultPanel" class="panel result-card hidden">
           <div class="result-mark"><div><b id="finalScore">0</b><span>/ 15</span></div></div>
-          <h2 id="resultTitle" class="panel-title">تم حفظ النتيجة</h2>
+          <h2 id="resultTitle" class="panel-title">تم إرسال التقييم</h2>
           <div id="resultLevel" class="result-level">Intermediate</div>
           <p id="resultText" class="panel-sub" style="max-width:680px;margin-inline:auto"></p>
           <div class="subscores">
@@ -870,7 +869,7 @@
         console.error(error);
         el(`nextBtn`).disabled = false;
         renderQuestion();
-        showToast(error?.message === `assessment-closed` ? `تم إغلاق التقييم من لوحة المدرب.` : `تعذر حفظ النتيجة في Firebase. راجع Firestore Rules.`);
+        showToast(error?.message === `assessment-closed` ? `التقييم غير متاح حالياً.` : `تعذر إرسال النتيجة حالياً. حاول مرة أخرى.`);
       }
     };
 
@@ -882,10 +881,10 @@
       el(`foundationScore`).textContent = `${result.subscores.foundation}/5`;
       el(`appliedScore`).textContent = `${result.subscores.applied}/5`;
       el(`advancedScore`).textContent = `${result.subscores.advanced}/5`;
-      el(`resultTitle`).textContent = mode === `post` ? `تم حفظ التقييم النهائي` : `تم حفظ التقييم المبدئي`;
+      el(`resultTitle`).textContent = mode === `post` ? `تم إرسال التقييم النهائي` : `تم إرسال التقييم المبدئي`;
       el(`resultText`).textContent = mode === `post`
-        ? `تم تسجيل النتيجة النهائية. سنستخدم المقارنة مع التقييم المبدئي لقياس التطور في كل مستوى.`
-        : `تم تسجيل النتيجة. سنستخدمها لضبط مستوى الشرح والتطبيقات خلال الأيام الثلاثة.`;
+        ? `تم تسجيل التقييم النهائي. ستظهر لك نتيجة المقارنة مع أول يوم.`
+        : `تم تسجيل التقييم المبدئي. شكراً، ونبدأ التدريب على هذا الأساس.`;
 
       if (mode === `post` && preResult) {
         const delta = result.score - Number(preResult.score || 0);
@@ -994,7 +993,7 @@
       } catch (error) {
         console.error(error);
         el(`resultsEmpty`).classList.remove(`hidden`);
-        el(`resultsEmpty`).textContent = `تعذر قراءة النتائج. راجع Firestore Rules.`;
+        el(`resultsEmpty`).textContent = `تعذر تحميل النتائج حالياً.`;
       }
     };
 

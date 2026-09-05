@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Workshop configuration: participants can save/update their own deterministic
+    // assessment document, and the trainer dashboard can read the group results.
+    // IMPORTANT: Because there is no Firebase Authentication in this lightweight
+    // static version, read access to this collection is public to anyone who knows
+    // the project and page. For private production reporting, add Firebase Auth
+    // and restrict read access to the trainer account.
+    match /orangeExcelAssessments/{assessmentId} {
+      allow create, update: if true;
+      allow read: if true;
+      allow delete: if false;
+    }
+  }
+}

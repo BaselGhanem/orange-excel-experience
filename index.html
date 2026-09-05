@@ -374,6 +374,14 @@
     .trainer-link.whatsapp:hover { border-color: #25D366; color: #128C7E; }
 
     /* ASSESSMENT */
+    .site-announcement { display:none; position:fixed; top:86px; left:50%; transform:translateX(-50%); z-index:95; width:min(900px,calc(100% - 28px)); padding:11px 16px; border-radius:14px; background:#FFF8EA; border:1px solid #FFE1A6; color:#77571B; text-align:center; font-size:13px; font-weight:800; box-shadow:0 10px 30px rgba(37,49,59,.08); }
+    .site-announcement.show { display:block; }
+    .maintenance-overlay { display:none; position:fixed; inset:0; z-index:999; background:radial-gradient(circle at 15% 15%,rgba(20,126,234,.13),transparent 30%),radial-gradient(circle at 85% 20%,rgba(255,121,0,.13),transparent 28%),#F7F9FB; place-items:center; padding:24px; }
+    .maintenance-overlay.show { display:grid; }
+    .maintenance-card { width:min(620px,100%); background:#fff; border:1px solid var(--line); border-radius:30px; padding:34px; text-align:center; box-shadow:var(--shadow-lg); }
+    .maintenance-card h2 { margin:14px 0 8px; font-size:36px; color:var(--ink); }
+    .maintenance-card p { margin:0; color:var(--muted); line-height:1.9; }
+
     .assessment {
       background:
         radial-gradient(circle at 15% 15%, rgba(20,126,234,.32), transparent 32%),
@@ -466,11 +474,12 @@
 </head>
 <body>
   <div class="progress-shell"><div class="progress-bar" id="progressBar"></div></div>
+  <div id="siteAnnouncement" class="site-announcement"></div>
 
   <nav class="nav" id="navbar">
     <div class="container nav-row">
       <a href="#top" class="brand-lockup" aria-label="CODERZ and Orange Jordan">
-        <img class="brand-logo" src="https://coderz-tech.com/images/logo.png" alt="CODERZ" />
+        <img id="secretAdminLogo" class="brand-logo" src="https://coderz-tech.com/images/logo.png" alt="CODERZ" />
         <span class="brand-x">×</span>
         <img class="brand-logo orange" src="https://orange.jo/sites/default/files/2025-11/OJO-logo.svg" alt="Orange Jordan" />
       </a>
@@ -670,20 +679,28 @@
   <section class="section assessment" id="assessment">
     <div class="container">
       <div class="assessment-card reveal">
-        <span class="eyebrow"><i data-lucide="clipboard-list" size="16"></i> Before Day 01</span>
-        <h2>خلونا نشوف مستواكم.</h2>
-        <p>15 سؤال سريع يعطينا صورة واضحة عن المستوى الحالي، حتى نضبط سرعة التدريب ونستفيد من الوقت بأفضل شكل.</p>
+        <span id="assessmentEyebrow" class="eyebrow"><i data-lucide="clipboard-list" size="16"></i> Before Day 01</span>
+        <h2 id="assessmentTitle">خلونا نشوف مستواكم.</h2>
+        <p id="assessmentDescription">15 سؤال سريع يعطينا صورة واضحة عن المستوى الحالي، حتى نضبط سرعة التدريب ونستفيد من الوقت بأفضل شكل.</p>
         <div class="assessment-facts">
           <span>15 Questions</span>
           <span>Beginner → Intermediate → Advanced</span>
-          <span>Microsoft Forms</span>
+          <span>Pre / Post Comparison</span>
           <span>≈ 10–12 Minutes</span>
         </div>
-        <button class="btn btn-primary assessment-link"><i data-lucide="play" size="18"></i> ابدأ التقييم المبدئي</button>
-        <div class="assessment-note">سيتم ربط الزر بـ Microsoft Forms قبل بداية التدريب.</div>
+        <button id="assessmentButton" class="btn btn-primary assessment-link"><i data-lucide="play" size="18"></i> ابدأ التقييم المبدئي</button>
+        <div id="assessmentNote" class="assessment-note">استخدم نفس الاسم في التقييمين حتى تظهر المقارنة بشكل صحيح.</div>
       </div>
     </div>
   </section>
+
+  <div id="maintenanceOverlay" class="maintenance-overlay">
+    <div class="maintenance-card">
+      <span class="eyebrow" style="color:var(--coderz-blue)"><i data-lucide="settings" size="16"></i> TRAINING PORTAL</span>
+      <h2>الموقع تحت التجهيز حالياً</h2>
+      <p>سيتم فتح تجربة التدريب من قبل المدرب في الوقت المحدد.</p>
+    </div>
+  </div>
 
   <footer>
     <div class="container footer-row">
@@ -697,24 +714,32 @@
     </div>
   </footer>
 
-  <div class="modal-backdrop" id="assessmentModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal">
-      <div class="modal-icon"><i data-lucide="link" size="26"></i></div>
-      <h3 id="modalTitle">رابط Microsoft Forms لسه ما انضاف</h3>
-      <p>لما تجهز رابط الـPre-Assessment، غيّر قيمة <strong>PRE_ASSESSMENT_URL</strong> بسطر واحد داخل آخر الملف، وكل أزرار التقييم رح تشتغل تلقائياً.</p>
-      <button class="btn btn-secondary" id="closeModal">تمام</button>
-    </div>
-  </div>
+  <script type="module">
+    const [firebaseAppModule, firebaseFirestoreModule] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
+    ]);
+    const { initializeApp } = firebaseAppModule;
+    const { getFirestore, doc, getDoc } = firebaseFirestoreModule;
 
-  <script>
-    const PRE_ASSESSMENT_URL = `./assessment/?mode=pre`;
-    const PLACEHOLDER_URL = ``;
+    const firebaseConfig = {
+      apiKey: `AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,
+      authDomain: `mobilehub-4eb1d.firebaseapp.com`,
+      projectId: `mobilehub-4eb1d`,
+      storageBucket: `mobilehub-4eb1d.firebasestorage.app`,
+      messagingSenderId: `13420871425`,
+      appId: `1:13420871425:web:e253fe9c5aebbc5925a500`,
+      measurementId: `G-RYWYCQXBT8`
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const DEFAULT_CONFIG = { assessmentPhase: `pre`, assessmentEnabled: true, siteLive: true, announcementEnabled: false, announcementText: `` };
+    let siteConfig = { ...DEFAULT_CONFIG };
 
     const navbar = document.getElementById(`navbar`);
     const progressBar = document.getElementById(`progressBar`);
-    const assessmentModal = document.getElementById(`assessmentModal`);
-    const closeModal = document.getElementById(`closeModal`);
     const menuBtn = document.getElementById(`menuBtn`);
+    const assessmentButton = document.getElementById(`assessmentButton`);
 
     const updateScrollUI = () => {
       const scrollTop = window.scrollY;
@@ -724,26 +749,66 @@
       navbar.classList.toggle(`scrolled`, scrollTop > 18);
     };
 
-    const openAssessment = () => {
-      if (PRE_ASSESSMENT_URL.trim() === ``) {
-        assessmentModal.classList.add(`open`);
-        return;
+    const renderAssessmentState = () => {
+      const phase = siteConfig.assessmentPhase || `pre`;
+      const enabled = !!siteConfig.assessmentEnabled && phase !== `closed`;
+      const isPost = phase === `post`;
+      const eyebrow = document.getElementById(`assessmentEyebrow`);
+      const title = document.getElementById(`assessmentTitle`);
+      const desc = document.getElementById(`assessmentDescription`);
+      const note = document.getElementById(`assessmentNote`);
+
+      if (isPost) {
+        eyebrow.innerHTML = `<i data-lucide="trending-up" size="16"></i> After Day 03`;
+        title.textContent = `خلونا نشوف الفرق.`;
+        desc.textContent = `نفس معيار القياس، لكن بعد التدريب. الهدف نشوف التغيّر الفعلي بالمستوى ونقارن النتيجة مع أول يوم.`;
+        assessmentButton.innerHTML = `<i data-lucide="play" size="18"></i> ابدأ التقييم النهائي`;
+        note.textContent = `استخدم نفس الاسم الذي سجلت فيه أول يوم حتى تظهر مقارنة Pre / Post.`;
+      } else if (phase === `closed`) {
+        eyebrow.innerHTML = `<i data-lucide="lock-keyhole" size="16"></i> Assessment`;
+        title.textContent = `التقييم مغلق حالياً.`;
+        desc.textContent = `سيتم فتح التقييم من قبل المدرب في الوقت المحدد.`;
+        assessmentButton.innerHTML = `<i data-lucide="lock-keyhole" size="18"></i> التقييم مغلق`;
+        note.textContent = `لا تحتاج لأي رابط جديد. نفس الصفحة ستتحدث تلقائياً عندما يفتح المدرب المرحلة التالية.`;
+      } else {
+        eyebrow.innerHTML = `<i data-lucide="clipboard-list" size="16"></i> Before Day 01`;
+        title.textContent = `خلونا نشوف مستواكم.`;
+        desc.textContent = `15 سؤال سريع يعطينا صورة واضحة عن المستوى الحالي، حتى نضبط سرعة التدريب ونستفيد من الوقت بأفضل شكل.`;
+        assessmentButton.innerHTML = `<i data-lucide="play" size="18"></i> ابدأ التقييم المبدئي`;
+        note.textContent = `استخدم نفس الاسم في التقييمين حتى تظهر المقارنة بشكل صحيح.`;
       }
-      window.open(PRE_ASSESSMENT_URL, `_blank`, `noopener,noreferrer`);
+      assessmentButton.disabled = !enabled;
+      assessmentButton.style.opacity = enabled ? `1` : `.55`;
+      assessmentButton.style.cursor = enabled ? `pointer` : `not-allowed`;
+      if (window.lucide) lucide.createIcons();
     };
 
-    document.querySelectorAll(`.assessment-link`).forEach((button) => {
-      button.addEventListener(`click`, openAssessment);
-    });
+    const loadSiteConfig = async () => {
+      try {
+        const snap = await getDoc(doc(db, `orangeExcelConfig`, `site`));
+        siteConfig = snap.exists() ? { ...DEFAULT_CONFIG, ...snap.data() } : { ...DEFAULT_CONFIG };
+      } catch (error) {
+        console.error(error);
+        siteConfig = { ...DEFAULT_CONFIG };
+      }
+      document.getElementById(`maintenanceOverlay`).classList.toggle(`show`, !siteConfig.siteLive);
+      const bar = document.getElementById(`siteAnnouncement`);
+      if (siteConfig.announcementEnabled && siteConfig.announcementText) {
+        bar.textContent = siteConfig.announcementText;
+        bar.classList.add(`show`);
+      } else {
+        bar.classList.remove(`show`);
+      }
+      renderAssessmentState();
+    };
 
-    closeModal.addEventListener(`click`, () => assessmentModal.classList.remove(`open`));
-    assessmentModal.addEventListener(`click`, (event) => {
-      if (event.target === assessmentModal) assessmentModal.classList.remove(`open`);
-    });
+    const openAssessment = () => {
+      if (!siteConfig.siteLive || !siteConfig.assessmentEnabled || siteConfig.assessmentPhase === `closed`) return;
+      window.location.href = `./assessment/`;
+    };
+    assessmentButton.addEventListener(`click`, openAssessment);
 
-    menuBtn.addEventListener(`click`, () => {
-      document.getElementById(`assessment`).scrollIntoView({ behavior: `smooth` });
-    });
+    menuBtn.addEventListener(`click`, () => document.getElementById(`assessment`).scrollIntoView({ behavior: `smooth` }));
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -753,11 +818,20 @@
         }
       });
     }, { threshold: 0.12 });
-
     document.querySelectorAll(`.reveal`).forEach((element) => observer.observe(element));
     window.addEventListener(`scroll`, updateScrollUI, { passive: true });
     updateScrollUI();
 
+    let adminClicks = 0;
+    let adminTimer = null;
+    document.getElementById(`secretAdminLogo`).addEventListener(`click`, () => {
+      adminClicks += 1;
+      clearTimeout(adminTimer);
+      adminTimer = setTimeout(() => { adminClicks = 0; }, 1800);
+      if (adminClicks >= 5) window.location.href = `./assessment/admin/`;
+    });
+
+    await loadSiteConfig();
     if (window.lucide) lucide.createIcons();
   </script>
 </body>

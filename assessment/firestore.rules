@@ -2,12 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /orangeExcelAssessments/{assessmentId} {
-      // Lightweight workshop setup:
-      // participants can save/update their deterministic Pre/Post document;
-      // trainer pages can read/edit/delete results.
-      // IMPORTANT: the 2505 PIN is a client-side UI gate, not Firebase Authentication.
-      // These rules are intentionally permissive for the training event.
+      // Workshop setup: participants submit; trainer dashboard reads/edits/deletes.
+      // The 2505 PIN is a client-side UI gate, not Firebase Authentication.
       allow create, read, update, delete: if true;
+    }
+
+    match /orangeExcelConfig/{configId} {
+      // Site/assessment live controls used by the trainer dashboard and participant pages.
+      // Kept permissive for this closed training event; move writes behind Firebase Auth for permanent use.
+      allow read, create, update, delete: if true;
     }
   }
 }

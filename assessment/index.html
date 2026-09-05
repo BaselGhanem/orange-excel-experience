@@ -245,6 +245,13 @@
 
     footer { padding: 22px 0 35px; color: var(--muted); font-size: 11px; text-align: center; }
 
+    .announcement-bar { display:none; margin: 0 0 16px; padding: 12px 16px; border-radius: 15px; background:#FFF8EA; border:1px solid #FFE1A6; color:#77571B; font-size:13px; font-weight:800; line-height:1.7; text-align:center; }
+    .announcement-bar.show { display:block; }
+    .blocked-panel { text-align:center; padding:34px 24px; }
+    .blocked-panel .icon { width:58px; height:58px; border-radius:18px; margin:0 auto 14px; display:grid; place-items:center; background:#F1F4F6; color:#6B7782; }
+    .blocked-panel h2 { margin:0 0 8px; color:var(--dark); }
+    .blocked-panel p { margin:0 auto; max-width:620px; color:var(--muted); line-height:1.9; }
+
     @media (max-width: 900px) {
       .hero-head { grid-template-columns: 1fr; }
       .quiz-layout { grid-template-columns: 1fr; }
@@ -279,7 +286,7 @@
   <div class="shell">
     <header class="brandbar">
       <div class="brand-group">
-        <img class="coderz" src="https://coderz-tech.com/images/logo.png" alt="CODERZ Academy" />
+        <img id="secretAdminLogo" class="coderz" src="https://coderz-tech.com/images/logo.png" alt="CODERZ Academy" />
         <span class="brand-x">×</span>
         <img class="orange" src="https://orange.jo/sites/default/files/2025-11/OJO-logo.svg" alt="Orange Jordan" />
       </div>
@@ -287,6 +294,7 @@
     </header>
 
     <main>
+      <div id="announcementBar" class="announcement-bar"></div>
       <section id="participantView">
         <div class="hero">
           <div class="hero-head">
@@ -306,6 +314,12 @@
             </div>
           </div>
         </div>
+
+        <section id="blockedPanel" class="panel blocked-panel hidden">
+          <div class="icon"><i data-lucide="lock-keyhole" size="26"></i></div>
+          <h2 id="blockedTitle">التقييم مغلق حالياً</h2>
+          <p id="blockedText">سيتم فتح التقييم من قبل المدرب في الوقت المحدد.</p>
+        </section>
 
         <section id="identityPanel" class="panel">
           <h2 class="panel-title">بيانات المشارك</h2>
@@ -441,7 +455,7 @@
 
     const { initializeApp } = firebaseAppModule;
     const { getAnalytics, isSupported } = firebaseAnalyticsModule;
-    const { getFirestore, doc, setDoc, getDocs, collection, serverTimestamp } = firebaseFirestoreModule;
+    const { getFirestore, doc, setDoc, getDoc, getDocs, collection, serverTimestamp } = firebaseFirestoreModule;
 
     const firebaseConfig = {
       apiKey: `AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,
@@ -460,7 +474,11 @@
     }).catch(() => {});
 
     const COLLECTION = `orangeExcelAssessments`;
+    const CONFIG_COLLECTION = `orangeExcelConfig`;
+    const CONFIG_DOC = `site`;
     const NAME_STORAGE = `coderzOrangeParticipantName`;
+    const DEFAULT_CONFIG = { assessmentPhase: `pre`, assessmentEnabled: true, siteLive: true, announcementEnabled: false, announcementText: `` };
+    let siteConfig = { ...DEFAULT_CONFIG };
 
     const QUESTIONS = [
       {
@@ -607,7 +625,8 @@
 
     const params = new URLSearchParams(window.location.search);
     const view = params.get(`view`);
-    const mode = params.get(`mode`) === `post` ? `post` : `pre`;
+    const forceMode = params.get(`force`) === `1`;
+    let mode = params.get(`mode`) === `post` ? `post` : `pre`;
 
     const state = {
       index: 0,
@@ -664,6 +683,41 @@
       }));
     };
 
+    const loadSiteConfig = async () => {
+      try {
+        const snap = await getDoc(doc(db, CONFIG_COLLECTION, CONFIG_DOC));
+        siteConfig = snap.exists() ? { ...DEFAULT_CONFIG, ...snap.data() } : { ...DEFAULT_CONFIG };
+      } catch (error) {
+        console.error(error);
+        siteConfig = { ...DEFAULT_CONFIG };
+      }
+
+      if (!forceMode && (siteConfig.assessmentPhase === `pre` || siteConfig.assessmentPhase === `post`)) {
+        mode = siteConfig.assessmentPhase;
+      }
+
+      if (siteConfig.announcementEnabled && siteConfig.announcementText) {
+        el(`announcementBar`).textContent = siteConfig.announcementText;
+        el(`announcementBar`).classList.add(`show`);
+      }
+
+      const unavailable = !siteConfig.siteLive || !siteConfig.assessmentEnabled || siteConfig.assessmentPhase === `closed`;
+      el(`blockedPanel`).classList.toggle(`hidden`, !unavailable);
+      el(`identityPanel`).classList.toggle(`hidden`, unavailable);
+      if (unavailable) {
+        if (!siteConfig.siteLive) {
+          el(`blockedTitle`).textContent = `الموقع تحت التجهيز حالياً`;
+          el(`blockedText`).textContent = `سيتم إعادة فتح تجربة التدريب من قبل المدرب.`;
+        } else if (!siteConfig.assessmentEnabled) {
+          el(`blockedTitle`).textContent = `استقبال الإجابات متوقف حالياً`;
+          el(`blockedText`).textContent = `التقييم موجود، لكن الإرسال متوقف مؤقتاً من لوحة المدرب.`;
+        } else {
+          el(`blockedTitle`).textContent = `التقييم مغلق حالياً`;
+          el(`blockedText`).textContent = `سيتم فتح التقييم من قبل المدرب في الوقت المحدد.`;
+        }
+      }
+    };
+
     const setModeUI = () => {
       const post = mode === `post`;
       el(`modeBadge`).classList.toggle(`post`, post);
@@ -679,6 +733,7 @@
     };
 
     const startAssessment = () => {
+      if (!siteConfig.siteLive || !siteConfig.assessmentEnabled || siteConfig.assessmentPhase === `closed`) { showToast(`التقييم مغلق حالياً.`); return; }
       const first = el(`firstName`).value.trim();
       const last = el(`lastName`).value.trim();
       if (!first || !last) {
@@ -764,6 +819,7 @@
     };
 
     const saveResult = async (result) => {
+      if (!siteConfig.siteLive || !siteConfig.assessmentEnabled || siteConfig.assessmentPhase === `closed`) throw new Error(`assessment-closed`);
       const documentId = `${state.participantKey}_${mode}`;
       await setDoc(doc(db, COLLECTION, documentId), {
         participantKey: state.participantKey,
@@ -814,7 +870,7 @@
         console.error(error);
         el(`nextBtn`).disabled = false;
         renderQuestion();
-        showToast(`تعذر حفظ النتيجة في Firebase. راجع Firestore Rules.`);
+        showToast(error?.message === `assessment-closed` ? `تم إغلاق التقييم من لوحة المدرب.` : `تعذر حفظ النتيجة في Firebase. راجع Firestore Rules.`);
       }
     };
 
@@ -971,13 +1027,24 @@
       URL.revokeObjectURL(url);
     };
 
-    const init = () => {
+    const init = async () => {
       if (view === `results`) {
         window.location.replace(`admin/`);
         return;
       }
+      await loadSiteConfig();
       setModeUI();
       loadStoredName();
+
+      let adminClicks = 0;
+      let adminTimer = null;
+      el(`secretAdminLogo`).addEventListener(`click`, () => {
+        adminClicks += 1;
+        clearTimeout(adminTimer);
+        adminTimer = setTimeout(() => { adminClicks = 0; }, 1800);
+        if (adminClicks >= 5) window.location.href = `admin/`;
+      });
+
       lucide.createIcons();
     };
 

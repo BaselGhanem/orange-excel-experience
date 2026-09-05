@@ -1,378 +1,168 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CODERZ × Orange | Assessment Admin</title>
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <style>
-    :root{
-      --dark:#374550;--blue:#147EEA;--blue-soft:#EEF6FE;--orange:#FF7900;--orange-dark:#F16E00;
-      --ink:#25313B;--muted:#6B7782;--line:#E5EAF0;--surface:#FAFBFC;--white:#fff;--green:#50BE87;
-      --red:#D64545;--red-soft:#FFF1F1;--yellow:#FFF7CC;--shadow:0 18px 55px rgba(31,45,56,.12);
-    }
-    *{box-sizing:border-box} body{margin:0;background:#F5F7F9;color:var(--ink);font-family:Arial,"Segoe UI",sans-serif}
-    button,input,select{font:inherit}.hidden{display:none!important}.app{min-height:100vh}
-    .topbar{background:var(--dark);color:#fff;padding:14px 20px;position:sticky;top:0;z-index:30;box-shadow:0 8px 22px rgba(0,0,0,.12)}
-    .topbar-inner{max-width:1280px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.2px}.brand .x{color:var(--orange)}
-    .top-actions{display:flex;gap:9px;flex-wrap:wrap}.container{max-width:1280px;margin:0 auto;padding:24px 18px 48px}
-    .hero{background:linear-gradient(135deg,#fff 0%,#F8FBFF 70%);border:1px solid var(--line);border-radius:28px;padding:26px;box-shadow:var(--shadow);margin-bottom:20px}
-    .hero h1{margin:0 0 8px;font-size:clamp(25px,3vw,42px);color:var(--dark)}.hero p{margin:0;color:var(--muted);line-height:1.8}
-    .badge{display:inline-flex;align-items:center;gap:7px;background:var(--blue-soft);color:var(--blue);padding:7px 11px;border-radius:999px;font-size:12px;font-weight:900;margin-bottom:12px}
-    .btn{border:0;border-radius:14px;padding:11px 15px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:.18s;text-decoration:none}
-    .btn:hover{transform:translateY(-1px)}.btn-dark{background:var(--dark);color:#fff}.btn-blue{background:var(--blue);color:#fff}.btn-orange{background:var(--orange);color:#fff}
-    .btn-ghost{background:#fff;color:var(--dark);border:1px solid var(--line)}.btn-danger{background:var(--red);color:#fff}.btn-small{padding:8px 10px;border-radius:10px;font-size:12px}
-    .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 8px 24px rgba(31,45,56,.06)}
-    .metric span{font-size:12px;color:var(--muted);font-weight:800}.metric b{display:block;font-size:28px;margin-top:5px;color:var(--dark)}.metric.blue b{color:var(--blue)}.metric.orange b{color:var(--orange)}.metric.green b{color:#2D8B61}
-    .toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}.toolbar-group{display:flex;gap:8px;flex-wrap:wrap}
-    .search{min-width:270px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 13px;outline:none}.search:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}
-    .table-card{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 8px 24px rgba(31,45,56,.06)}.table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse;min-width:1060px}th{background:var(--dark);color:#fff;font-size:12px;text-align:center;padding:13px 10px;white-space:nowrap}td{border-bottom:1px solid #EDF0F2;padding:12px 10px;text-align:center;font-size:13px}td.name{text-align:right;font-weight:900;color:var(--dark);min-width:185px}
-    tr:hover td{background:#FBFCFD}.pill{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-weight:900}.pill.post{background:#FFF3E8;color:var(--orange-dark)}.gain.pos{color:#208556;font-weight:900}.gain.neg{color:var(--red);font-weight:900}
-    .actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.empty{padding:42px;text-align:center;color:var(--muted)}
-    .login-shell{min-height:100vh;display:grid;place-items:center;padding:20px}.login-card{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:28px;padding:28px;box-shadow:var(--shadow)}
-    .pin{width:100%;font-size:28px;letter-spacing:12px;text-align:center;direction:ltr;border:1px solid var(--line);border-radius:16px;padding:14px;outline:none;margin:15px 0}.pin:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}
-    .login-card h1{margin:0;color:var(--dark)}.login-card p{color:var(--muted);line-height:1.7}.error{color:var(--red);font-size:13px;font-weight:700;min-height:20px}
-    .modal-backdrop{position:fixed;inset:0;background:rgba(24,33,40,.62);display:grid;place-items:center;padding:18px;z-index:100}.modal{width:min(650px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:24px;padding:23px;box-shadow:0 28px 80px rgba(0,0,0,.28)}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}.modal-head h2{margin:0;color:var(--dark)}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field{display:grid;gap:6px}.field label{font-size:12px;font-weight:900;color:var(--muted)}.field input,.field select{border:1px solid var(--line);border-radius:12px;padding:11px;outline:none}.field input:focus{border-color:var(--blue)}
-    .notice{background:#FFF8EA;border:1px solid #FFE1A6;color:#77571B;border-radius:16px;padding:13px;font-size:12px;line-height:1.7;margin-top:14px}.danger-zone{margin-top:22px;background:var(--red-soft);border:1px solid #FFD5D5;border-radius:20px;padding:18px}.danger-zone h3{margin:0 0 6px;color:var(--red)}
-    .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--dark);color:#fff;padding:11px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:200}.toast.show{opacity:1;transform:translate(-50%,0)}
-    @media(max-width:900px){.summary{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.search{min-width:100%;width:100%}.toolbar{align-items:stretch}.toolbar-group{width:100%}}
-    @media(max-width:520px){.summary{grid-template-columns:1fr}.container{padding:16px 12px 40px}.hero{padding:20px;border-radius:22px}.btn{width:100%}.top-actions{width:100%}}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#374550" />
+<title>CODERZ × Orange | Trainer Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{--dark:#374550;--dark2:#25313B;--blue:#147EEA;--blue-soft:#EEF6FE;--orange:#FF7900;--orange-soft:#FFF3E8;--ink:#25313B;--muted:#6B7782;--line:#E5EAF0;--surface:#F5F7F9;--white:#fff;--green:#50BE87;--green-soft:#EAF8F1;--red:#D64545;--red-soft:#FFF1F1;--yellow:#FFF7CC;--purple:#A885D8;--shadow:0 24px 70px rgba(37,49,59,.12)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--surface);color:var(--ink);font-family:'Cairo',Arial,sans-serif;-webkit-font-smoothing:antialiased}button,input,select,textarea{font:inherit}.hidden{display:none!important}a{text-decoration:none;color:inherit}
+.login-shell{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 15% 15%,rgba(20,126,234,.12),transparent 30%),radial-gradient(circle at 85% 20%,rgba(255,121,0,.12),transparent 28%),#F7F9FB}.login-card{width:min(460px,100%);background:#fff;border:1px solid rgba(229,234,240,.9);border-radius:30px;padding:30px;box-shadow:var(--shadow)}.login-brand{display:flex;direction:ltr;align-items:center;gap:12px;margin-bottom:22px}.login-brand img{height:34px;object-fit:contain}.login-brand .orange{height:40px;max-width:76px}.login-brand span{color:#A1AAB1;font-weight:900}.badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900;background:var(--blue-soft);color:var(--blue);margin-bottom:14px}.login-card h1{margin:0 0 8px;font-size:34px;color:var(--dark)}.login-card p{margin:0;color:var(--muted);line-height:1.8}.pin{width:100%;margin:18px 0 8px;border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center;direction:ltr;font-size:28px;letter-spacing:12px;outline:none}.pin:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}.error{color:var(--red);font-size:13px;font-weight:800;min-height:22px}
+.app{min-height:100vh}.topbar{position:sticky;top:0;z-index:50;background:rgba(55,69,80,.96);backdrop-filter:blur(16px);color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}.topbar-inner{max-width:1360px;margin:auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}.top-brand{display:flex;align-items:center;gap:10px;font-weight:900;direction:ltr}.top-brand .x{color:var(--orange)}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.container{max-width:1360px;margin:auto;padding:26px 18px 52px}
+.hero{display:grid;grid-template-columns:1.4fr .6fr;gap:18px;margin-bottom:18px}.hero-main,.live-card{background:#fff;border:1px solid var(--line);border-radius:28px;box-shadow:0 10px 35px rgba(37,49,59,.06)}.hero-main{padding:28px;background:linear-gradient(135deg,#fff,#F7FBFF)}.hero-main h1{margin:6px 0 8px;font-size:clamp(28px,3.5vw,48px);color:var(--dark);letter-spacing:-.02em}.hero-main p{margin:0;color:var(--muted);line-height:1.9;max-width:780px}.live-card{padding:22px;display:flex;flex-direction:column;justify-content:space-between}.live-card .label{font-size:12px;color:var(--muted);font-weight:900}.phase{font-size:28px;font-weight:900;margin:8px 0;color:var(--dark)}.phase.pre{color:var(--blue)}.phase.post{color:var(--orange)}.phase.closed{color:var(--red)}.live-row{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px rgba(80,190,135,.12)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tab{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:14px;padding:11px 15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:8px}.tab.active{background:var(--dark);color:#fff;border-color:var(--dark)}.panel{display:none}.panel.active{display:block}
+.summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0 18px}.metric{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 8px 24px rgba(31,45,56,.05)}.metric span{font-size:12px;color:var(--muted);font-weight:900}.metric b{display:block;font-size:29px;margin-top:5px;color:var(--dark)}.metric.blue b{color:var(--blue)}.metric.orange b{color:var(--orange)}.metric.green b{color:#25845A}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0}.toolbar-group{display:flex;gap:8px;flex-wrap:wrap}.search{min-width:290px;border:1px solid var(--line);border-radius:14px;padding:11px 13px;outline:none;background:#fff}.search:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}
+.btn{border:0;border-radius:13px;padding:10px 14px;font-weight:900;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:.18s}.btn:hover{transform:translateY(-1px)}.btn-dark{background:var(--dark);color:#fff}.btn-blue{background:var(--blue);color:#fff}.btn-orange{background:var(--orange);color:#fff}.btn-green{background:var(--green);color:#fff}.btn-ghost{background:#fff;color:var(--dark);border:1px solid var(--line)}.btn-danger{background:var(--red);color:#fff}.btn-small{font-size:12px;padding:8px 10px;border-radius:10px}
+.table-card{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 8px 24px rgba(31,45,56,.05)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1080px}th{background:var(--dark);color:#fff;font-size:12px;padding:13px 10px;text-align:center;white-space:nowrap}td{padding:12px 10px;border-bottom:1px solid #EDF0F2;text-align:center;font-size:13px}td.name{text-align:right;font-weight:900;color:var(--dark);min-width:190px}tr:hover td{background:#FBFCFD}.pill{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--blue-soft);color:var(--blue);font-weight:900}.pill.post{background:var(--orange-soft);color:var(--orange)}.gain.pos{color:#208556;font-weight:900}.gain.neg{color:var(--red);font-weight:900}.actions{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.empty{padding:42px;text-align:center;color:var(--muted)}
+.control-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}.control-card{background:#fff;border:1px solid var(--line);border-radius:24px;padding:22px;box-shadow:0 8px 24px rgba(31,45,56,.05)}.control-card h2{margin:0 0 4px;color:var(--dark);font-size:21px}.control-card p{margin:0 0 18px;color:var(--muted);line-height:1.7;font-size:13px}.field{display:grid;gap:7px;margin-bottom:13px}.field label{font-size:12px;font-weight:900;color:var(--muted)}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:13px;padding:11px 12px;outline:none;background:#fff}.field textarea{min-height:96px;resize:vertical}.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(20,126,234,.08)}.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #EFF2F4}.switch-row:last-child{border-bottom:0}.switch-copy b{display:block;color:var(--dark);font-size:14px}.switch-copy span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.switch{position:relative;width:48px;height:28px;flex:0 0 auto}.switch input{display:none}.switch i{position:absolute;inset:0;border-radius:999px;background:#CCD4DA;transition:.2s}.switch i:after{content:'';position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.18)}.switch input:checked+i{background:var(--green)}.switch input:checked+i:after{transform:translateX(20px)}.phase-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 18px}.phase-btn{border:1px solid var(--line);background:#fff;border-radius:14px;padding:13px 10px;font-weight:900;cursor:pointer;color:var(--muted)}.phase-btn.active.pre{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}.phase-btn.active.post{border-color:var(--orange);background:var(--orange-soft);color:var(--orange)}.phase-btn.active.closed{border-color:var(--red);background:var(--red-soft);color:var(--red)}.preview{border:1px dashed #C9D3DA;border-radius:18px;padding:18px;background:#FBFCFD}.preview-label{font-size:11px;color:var(--muted);font-weight:900;margin-bottom:8px}.preview h3{margin:0 0 6px;color:var(--dark)}.preview p{margin:0;color:var(--muted);line-height:1.7;font-size:13px}.link-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}.link-card{border:1px solid var(--line);background:#fff;border-radius:16px;padding:14px}.link-card b{display:block;color:var(--dark);font-size:13px}.link-card code{display:block;direction:ltr;text-align:left;color:var(--blue);font-size:11px;margin:7px 0;word-break:break-all}.note{margin-top:14px;padding:13px;border-radius:15px;background:#FFF8EA;border:1px solid #FFE1A6;color:#77571B;font-size:12px;line-height:1.7}.danger-zone{margin-top:18px;background:var(--red-soft);border:1px solid #FFD5D5;border-radius:20px;padding:18px}.danger-zone h3{margin:0 0 5px;color:var(--red)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(24,33,40,.62);display:grid;place-items:center;padding:18px;z-index:100}.modal{width:min(660px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:24px;padding:23px;box-shadow:0 28px 80px rgba(0,0,0,.28)}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}.modal-head h2{margin:0;color:var(--dark)}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--dark);color:#fff;padding:11px 16px;border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:200}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:980px){.hero{grid-template-columns:1fr}.summary{grid-template-columns:repeat(2,1fr)}.control-grid{grid-template-columns:1fr}.topbar-inner{align-items:flex-start;flex-direction:column}.search{width:100%;min-width:100%}.toolbar{align-items:stretch}.toolbar-group{width:100%}}@media(max-width:580px){.summary{grid-template-columns:1fr}.container{padding:18px 12px 40px}.hero-main,.live-card,.control-card{border-radius:22px;padding:19px}.btn{width:100%}.top-actions{width:100%}.phase-buttons{grid-template-columns:1fr}.link-grid{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.tabs{display:grid;grid-template-columns:1fr 1fr}.tab{justify-content:center}}
+</style>
 </head>
 <body>
-  <div id="loginView" class="login-shell">
-    <div class="login-card">
-      <div class="badge"><i data-lucide="shield-check" size="16"></i> TRAINER ADMIN</div>
-      <h1>CODERZ × Orange</h1>
-      <p>لوحة إدارة نتائج التقييم المبدئي والنهائي. أدخل رمز الإدارة للمتابعة.</p>
-      <input id="pinInput" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" />
-      <div id="loginError" class="error"></div>
-      <button id="loginBtn" class="btn btn-dark" style="width:100%"><i data-lucide="log-in" size="18"></i> دخول</button>
-    </div>
+<div id="loginView" class="login-shell">
+  <div class="login-card">
+    <div class="login-brand"><img src="https://coderz-tech.com/images/logo.png" alt="CODERZ"><span>×</span><img class="orange" src="https://orange.jo/sites/default/files/2025-11/OJO-logo.svg" alt="Orange"></div>
+    <div class="badge"><i data-lucide="shield-check" size="16"></i> TRAINER CONTROL CENTER</div>
+    <h1>Admin Access</h1>
+    <p>لوحة التحكم الكاملة بالموقع والتقييمات والنتائج.</p>
+    <input id="pinInput" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••">
+    <div id="loginError" class="error"></div>
+    <button id="loginBtn" class="btn btn-dark" style="width:100%"><i data-lucide="log-in" size="18"></i> دخول</button>
   </div>
+</div>
 
-  <div id="adminView" class="app hidden">
-    <div class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">CODERZ <span class="x">×</span> Orange | Assessment Admin</div>
-        <div class="top-actions">
-          <a class="btn btn-ghost btn-small" href="../?mode=pre"><i data-lucide="clipboard-list" size="15"></i> Pre</a>
-          <a class="btn btn-ghost btn-small" href="../?mode=post"><i data-lucide="trending-up" size="15"></i> Post</a>
-          <button id="logoutBtn" class="btn btn-orange btn-small"><i data-lucide="log-out" size="15"></i> خروج</button>
-        </div>
+<div id="adminView" class="app hidden">
+  <div class="topbar"><div class="topbar-inner">
+    <div class="top-brand">CODERZ <span class="x">×</span> Orange <span style="opacity:.55">|</span> Trainer Control Center</div>
+    <div class="top-actions">
+      <a class="btn btn-ghost btn-small" href="../../" target="_blank"><i data-lucide="external-link" size="15"></i> الموقع</a>
+      <a class="btn btn-ghost btn-small" href="../?mode=pre&force=1" target="_blank"><i data-lucide="clipboard-list" size="15"></i> Preview Pre</a>
+      <a class="btn btn-ghost btn-small" href="../?mode=post&force=1" target="_blank"><i data-lucide="trending-up" size="15"></i> Preview Post</a>
+      <button id="logoutBtn" class="btn btn-orange btn-small"><i data-lucide="log-out" size="15"></i> خروج</button>
+    </div>
+  </div></div>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="badge"><i data-lucide="sliders-horizontal" size="16"></i> LIVE TRAINING CONTROL</div>
+        <h1>كل شيء من مكان واحد.</h1>
+        <p>غيّر مرحلة التقييم، افتح أو أغلق الاستقبال، فعّل رسالة للمشاركين، راقب النتائج، وعدّل أو احذف المحاولات — بدون تعديل الكود كل مرة.</p>
       </div>
+      <div class="live-card">
+        <div><div class="label">CURRENT ASSESSMENT PHASE</div><div id="currentPhase" class="phase pre">PRE</div></div>
+        <div class="live-row"><span class="dot"></span><span id="currentStatus">Portal Live</span></div>
+      </div>
+    </section>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="results"><i data-lucide="bar-chart-3" size="17"></i> النتائج</button>
+      <button class="tab" data-tab="site"><i data-lucide="settings-2" size="17"></i> التحكم بالموقع</button>
     </div>
 
-    <main class="container">
-      <section class="hero">
-        <div class="badge"><i data-lucide="bar-chart-3" size="16"></i> LIVE RESULTS CONTROL</div>
-        <h1>Pre / Post Assessment</h1>
-        <p>عرض، تعديل، حذف، وإعادة ضبط نتائج المشاركين. حذف محاولة Pre أو Post يسمح لك بتنظيف النتيجة وإعادة التقييم عند الحاجة.</p>
-      </section>
-
+    <section id="panel-results" class="panel active">
       <section class="summary">
-        <div class="card metric"><span>Participants</span><b id="mParticipants">0</b></div>
-        <div class="card metric blue"><span>Average Pre</span><b id="mPre">—</b></div>
-        <div class="card metric orange"><span>Average Post</span><b id="mPost">—</b></div>
-        <div class="card metric green"><span>Average Gain</span><b id="mGain">—</b></div>
-        <div class="card metric"><span>Paired</span><b id="mPaired">0</b></div>
+        <div class="metric"><span>Participants</span><b id="mParticipants">0</b></div>
+        <div class="metric blue"><span>Average Pre</span><b id="mPre">—</b></div>
+        <div class="metric orange"><span>Average Post</span><b id="mPost">—</b></div>
+        <div class="metric green"><span>Average Gain</span><b id="mGain">—</b></div>
+        <div class="metric"><span>Paired</span><b id="mPaired">0</b></div>
       </section>
-
       <div class="toolbar">
-        <div class="toolbar-group">
-          <button id="refreshBtn" class="btn btn-blue"><i data-lucide="refresh-cw" size="17"></i> تحديث</button>
-          <button id="exportBtn" class="btn btn-ghost"><i data-lucide="download" size="17"></i> CSV</button>
+        <div class="toolbar-group"><button id="refreshBtn" class="btn btn-blue"><i data-lucide="refresh-cw" size="17"></i> تحديث</button><button id="exportBtn" class="btn btn-ghost"><i data-lucide="download" size="17"></i> CSV</button></div>
+        <input id="searchInput" class="search" type="search" placeholder="ابحث باسم المشارك...">
+      </div>
+      <section class="table-card"><div class="table-wrap"><table><thead><tr><th>Participant</th><th>Pre</th><th>Post</th><th>Gain</th><th>Foundation</th><th>Applied</th><th>Advanced</th><th>Updated</th><th>Controls</th></tr></thead><tbody id="rowsBody"></tbody></table></div><div id="emptyState" class="empty hidden">لا توجد نتائج بعد.</div></section>
+      <section class="danger-zone"><h3>Danger Zone</h3><p>حذف كل نتائج Pre وPost من Firestore. سيطلب رمز الإدارة مرة ثانية.</p><button id="deleteAllBtn" class="btn btn-danger"><i data-lucide="trash-2" size="17"></i> حذف جميع النتائج</button></section>
+    </section>
+
+    <section id="panel-site" class="panel">
+      <div class="control-grid">
+        <div class="control-card">
+          <h2>Assessment Phase</h2><p>هاي أهم حركة أثناء الدورة. نفس رابط الموقع يظل مع المشاركين، وإنت تغيّر المرحلة من هون.</p>
+          <div class="phase-buttons">
+            <button class="phase-btn pre" data-phase="pre">PRE • Day 1</button>
+            <button class="phase-btn post" data-phase="post">POST • Last Day</button>
+            <button class="phase-btn closed" data-phase="closed">CLOSED</button>
+          </div>
+          <div class="switch-row"><div class="switch-copy"><b>Allow Assessment Submissions</b><span>إيقافها يمنع أي إرسال جديد حتى لو الرابط معروف.</span></div><label class="switch"><input id="cfgAssessmentEnabled" type="checkbox"><i></i></label></div>
+          <div class="switch-row"><div class="switch-copy"><b>Site Live</b><span>إذا أوقفتها، تظهر صفحة Maintenance بدل الموقع الرئيسي والتقييم.</span></div><label class="switch"><input id="cfgSiteLive" type="checkbox"><i></i></label></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px"><button id="saveConfigBtn" class="btn btn-blue"><i data-lucide="save" size="17"></i> حفظ الإعدادات</button><button id="resetConfigBtn" class="btn btn-ghost"><i data-lucide="rotate-ccw" size="17"></i> الإعدادات الافتراضية</button></div>
         </div>
-        <input id="searchInput" class="search" type="search" placeholder="ابحث باسم المشارك..." />
-      </div>
-
-      <section class="table-card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Participant</th><th>Pre</th><th>Post</th><th>Gain</th><th>Foundation</th><th>Applied</th><th>Advanced</th><th>Updated</th><th>Controls</th></tr></thead>
-            <tbody id="rowsBody"></tbody>
-          </table>
+        <div class="control-card">
+          <h2>Participant Message</h2><p>رسالة قصيرة تظهر أعلى الموقع والتقييم. مناسبة لتنبيه القاعة أو إعطاء تعليمات سريعة.</p>
+          <div class="switch-row"><div class="switch-copy"><b>Show Announcement</b><span>إظهار / إخفاء الرسالة فوراً.</span></div><label class="switch"><input id="cfgAnnouncementEnabled" type="checkbox"><i></i></label></div>
+          <div class="field" style="margin-top:14px"><label>Announcement Text</label><textarea id="cfgAnnouncementText" placeholder="مثال: التقييم النهائي مفتوح الآن — استخدم نفس الاسم الذي سجلت فيه أول يوم."></textarea></div>
+          <div class="preview"><div class="preview-label">LIVE PREVIEW</div><h3 id="previewTitle">Pre-Assessment</h3><p id="previewText">التقييم المبدئي مفتوح الآن.</p></div>
         </div>
-        <div id="emptyState" class="empty hidden">لا توجد نتائج بعد.</div>
-      </section>
-
-      <section class="danger-zone">
-        <h3>Danger Zone</h3>
-        <p>حذف جميع النتائج نهائي من Firestore. سيطلب منك رمز الإدارة مرة أخرى قبل التنفيذ.</p>
-        <button id="deleteAllBtn" class="btn btn-danger"><i data-lucide="trash-2" size="17"></i> حذف جميع النتائج</button>
-      </section>
-    </main>
-  </div>
-
-  <div id="editBackdrop" class="modal-backdrop hidden">
-    <div class="modal">
-      <div class="modal-head"><h2>تعديل النتيجة</h2><button id="closeEditBtn" class="btn btn-ghost btn-small">إغلاق</button></div>
-      <div class="grid2">
-        <div class="field"><label>First Name</label><input id="editFirst" /></div>
-        <div class="field"><label>Last Name</label><input id="editLast" /></div>
-        <div class="field"><label>Mode</label><input id="editMode" disabled /></div>
-        <div class="field"><label>Total Score / 15</label><input id="editScore" type="number" min="0" max="15" /></div>
-        <div class="field"><label>Foundation / 5</label><input id="editFoundation" type="number" min="0" max="5" /></div>
-        <div class="field"><label>Applied / 5</label><input id="editApplied" type="number" min="0" max="5" /></div>
-        <div class="field"><label>Advanced / 5</label><input id="editAdvanced" type="number" min="0" max="5" /></div>
-        <div class="field"><label>Document ID</label><input id="editDocId" disabled /></div>
       </div>
-      <div class="notice">تعديل العلامة من لوحة الإدارة هو Override يدوي. إجابات الأسئلة الأصلية تبقى محفوظة كما هي.</div>
-      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-        <button id="saveEditBtn" class="btn btn-blue"><i data-lucide="save" size="17"></i> حفظ التعديل</button>
-        <button id="deleteAttemptBtn" class="btn btn-danger"><i data-lucide="trash-2" size="17"></i> حذف هذه المحاولة</button>
+      <div class="control-card" style="margin-top:16px">
+        <h2>روابط سريعة</h2><p>ما تحتاج تغيّر الرابط بين أول يوم وآخر يوم. الرابط العام يقرأ المرحلة الحالية تلقائياً.</p>
+        <div class="link-grid">
+          <div class="link-card"><b>الرابط العام للمشاركين</b><code id="publicUrl">…</code><button class="btn btn-ghost btn-small" data-copy="public"><i data-lucide="copy" size="14"></i> نسخ</button></div>
+          <div class="link-card"><b>Pre مباشر للاختبار</b><code id="preUrl">…</code><button class="btn btn-ghost btn-small" data-copy="pre"><i data-lucide="copy" size="14"></i> نسخ</button></div>
+          <div class="link-card"><b>Post مباشر للاختبار</b><code id="postUrl">…</code><button class="btn btn-ghost btn-small" data-copy="post"><i data-lucide="copy" size="14"></i> نسخ</button></div>
+          <div class="link-card"><b>Admin</b><code id="adminUrl">…</code><button class="btn btn-ghost btn-small" data-copy="admin"><i data-lucide="copy" size="14"></i> نسخ</button></div>
+        </div>
+        <div class="note"><b>طريقة الـPost:</b> آخر يوم افتح هذه الصفحة → اختر <b>POST</b> → Save. نفس رابط الموقع الذي استخدموه أول يوم سيحوّلهم تلقائياً إلى Post-Assessment، والاسم المحفوظ على جهازهم سيظهر تلقائياً.</div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
+</div>
 
-  <div id="toast" class="toast"></div>
+<div id="editBackdrop" class="modal-backdrop hidden"><div class="modal"><div class="modal-head"><h2>تعديل النتيجة</h2><button id="closeEditBtn" class="btn btn-ghost btn-small">إغلاق</button></div><div class="grid2"><div class="field"><label>First Name</label><input id="editFirst"></div><div class="field"><label>Last Name</label><input id="editLast"></div><div class="field"><label>Mode</label><input id="editMode" disabled></div><div class="field"><label>Total / 15</label><input id="editScore" type="number" min="0" max="15"></div><div class="field"><label>Foundation / 5</label><input id="editFoundation" type="number" min="0" max="5"></div><div class="field"><label>Applied / 5</label><input id="editApplied" type="number" min="0" max="5"></div><div class="field"><label>Advanced / 5</label><input id="editAdvanced" type="number" min="0" max="5"></div><div class="field"><label>Document ID</label><input id="editDocId" disabled></div></div><div class="note">تعديل العلامة Override يدوي. إجابات الأسئلة الأصلية تبقى محفوظة.</div><div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap"><button id="saveEditBtn" class="btn btn-blue"><i data-lucide="save" size="17"></i> حفظ</button><button id="deleteAttemptBtn" class="btn btn-danger"><i data-lucide="trash-2" size="17"></i> حذف المحاولة</button></div></div></div>
+<div id="toast" class="toast"></div>
 
-  <script type="module">
-    const [firebaseAppModule, firebaseFirestoreModule] = await Promise.all([
-      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),
-      import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
-    ]);
-
-    const { initializeApp } = firebaseAppModule;
-    const { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } = firebaseFirestoreModule;
-
-    const firebaseConfig = {
-      apiKey: `AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,
-      authDomain: `mobilehub-4eb1d.firebaseapp.com`,
-      projectId: `mobilehub-4eb1d`,
-      storageBucket: `mobilehub-4eb1d.firebasestorage.app`,
-      messagingSenderId: `13420871425`,
-      appId: `1:13420871425:web:e253fe9c5aebbc5925a500`,
-      measurementId: `G-RYWYCQXBT8`
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const COLLECTION = `orangeExcelAssessments`;
-    const ADMIN_SESSION = `coderzOrangeAdminSession`;
-    const ADMIN_PIN_HASH = `9060ce5653093cd9bff480cb01ff0e3a790e6f545e214a3dd85841daabac7848`;
-
-    const state = { attempts: [], people: [], editing: null };
-    const el = (id) => document.getElementById(id);
-
-    const sha256 = async (value) => {
-      const bytes = new TextEncoder().encode(value);
-      const digest = await crypto.subtle.digest(`SHA-256`, bytes);
-      return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, `0`)).join(``);
-    };
-
-    const showToast = (message) => {
-      const toast = el(`toast`);
-      toast.textContent = message;
-      toast.classList.add(`show`);
-      setTimeout(() => toast.classList.remove(`show`), 2400);
-    };
-
-    const authorized = () => sessionStorage.getItem(ADMIN_SESSION) === `1`;
-    const showAdmin = () => {
-      el(`loginView`).classList.add(`hidden`);
-      el(`adminView`).classList.remove(`hidden`);
-      lucide.createIcons();
-      loadResults();
-    };
-
-    const login = async () => {
-      const pin = el(`pinInput`).value.trim();
-      if (await sha256(pin) !== ADMIN_PIN_HASH) {
-        el(`loginError`).textContent = `رمز الإدارة غير صحيح.`;
-        el(`pinInput`).value = ``;
-        return;
-      }
-      sessionStorage.setItem(ADMIN_SESSION, `1`);
-      el(`loginError`).textContent = ``;
-      showAdmin();
-    };
-
-    const safeDate = (value) => {
-      if (!value) return null;
-      if (value.toDate) return value.toDate();
-      const d = new Date(value);
-      return Number.isNaN(d.getTime()) ? null : d;
-    };
-
-    const avg = (arr) => arr.length ? (arr.reduce((a,b) => a+b, 0) / arr.length).toFixed(1) : `—`;
-
-    const buildPeople = (attempts) => {
-      const map = new Map();
-      attempts.forEach((attempt) => {
-        const key = attempt.participantKey || attempt.id;
-        if (!map.has(key)) map.set(key, { key, fullName: attempt.fullName || `${attempt.firstName || ``} ${attempt.lastName || ``}`.trim(), pre: null, post: null });
-        const person = map.get(key);
-        if (attempt.mode === `pre` || attempt.mode === `post`) person[attempt.mode] = attempt;
-        if (attempt.fullName) person.fullName = attempt.fullName;
-      });
-      return [...map.values()].sort((a,b) => a.fullName.localeCompare(b.fullName, `ar`));
-    };
-
-    const updateMetrics = () => {
-      const pre = state.people.filter((p) => p.pre).map((p) => Number(p.pre.score || 0));
-      const post = state.people.filter((p) => p.post).map((p) => Number(p.post.score || 0));
-      const paired = state.people.filter((p) => p.pre && p.post);
-      const gains = paired.map((p) => Number(p.post.score || 0) - Number(p.pre.score || 0));
-      el(`mParticipants`).textContent = state.people.length;
-      el(`mPre`).textContent = pre.length ? `${avg(pre)}/15` : `—`;
-      el(`mPost`).textContent = post.length ? `${avg(post)}/15` : `—`;
-      el(`mGain`).textContent = gains.length ? `${Number(avg(gains)) > 0 ? `+` : ``}${avg(gains)}` : `—`;
-      el(`mPaired`).textContent = paired.length;
-    };
-
-    const scoreCell = (attempt, post = false) => attempt ? `<span class="pill${post ? ` post` : ``}">${attempt.score}/15</span>` : `—`;
-    const sectionCell = (pre, post, field) => `${pre ? pre[field] : `—`} / ${post ? post[field] : `—`}`;
-
-    const renderRows = () => {
-      const q = el(`searchInput`).value.trim().toLowerCase();
-      const body = el(`rowsBody`);
-      body.innerHTML = ``;
-      const people = state.people.filter((p) => !q || p.fullName.toLowerCase().includes(q));
-      el(`emptyState`).classList.toggle(`hidden`, people.length > 0);
-
-      people.forEach((person) => {
-        const pre = person.pre;
-        const post = person.post;
-        const delta = pre && post ? Number(post.score || 0) - Number(pre.score || 0) : null;
-        const latest = [pre,post].filter(Boolean).map((x) => safeDate(x.submittedAt || x.clientSubmittedAt)).filter(Boolean).sort((a,b) => b-a)[0];
-        const tr = document.createElement(`tr`);
-        tr.innerHTML = `
-          <td class="name">${person.fullName || `—`}</td>
-          <td>${scoreCell(pre)}</td>
-          <td>${scoreCell(post,true)}</td>
-          <td class="gain ${delta === null ? `` : delta >= 0 ? `pos` : `neg`}">${delta === null ? `—` : `${delta > 0 ? `+` : ``}${delta}`}</td>
-          <td>${sectionCell(pre,post,`foundationScore`)}</td>
-          <td>${sectionCell(pre,post,`appliedScore`)}</td>
-          <td>${sectionCell(pre,post,`advancedScore`)}</td>
-          <td>${latest ? latest.toLocaleString(`en-GB`,{day:`2-digit`,month:`short`,hour:`2-digit`,minute:`2-digit`}) : `—`}</td>
-          <td><div class="actions">
-            ${pre ? `<button class="btn btn-ghost btn-small" data-edit="${pre.id}">Edit Pre</button>` : ``}
-            ${post ? `<button class="btn btn-ghost btn-small" data-edit="${post.id}">Edit Post</button>` : ``}
-            <button class="btn btn-danger btn-small" data-delete-person="${person.key}">Delete Person</button>
-          </div></td>`;
-        body.appendChild(tr);
-      });
-
-      body.querySelectorAll(`[data-edit]`).forEach((button) => button.addEventListener(`click`, () => openEdit(button.dataset.edit)));
-      body.querySelectorAll(`[data-delete-person]`).forEach((button) => button.addEventListener(`click`, () => deletePerson(button.dataset.deletePerson)));
-      lucide.createIcons();
-    };
-
-    const loadResults = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, COLLECTION));
-        state.attempts = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
-        state.people = buildPeople(state.attempts);
-        updateMetrics();
-        renderRows();
-        showToast(`تم تحديث النتائج.`);
-      } catch (error) {
-        console.error(error);
-        showToast(`تعذر قراءة النتائج. راجع Firestore Rules.`);
-      }
-    };
-
-    const openEdit = (id) => {
-      const attempt = state.attempts.find((a) => a.id === id);
-      if (!attempt) return;
-      state.editing = attempt;
-      el(`editFirst`).value = attempt.firstName || ``;
-      el(`editLast`).value = attempt.lastName || ``;
-      el(`editMode`).value = attempt.mode || ``;
-      el(`editScore`).value = Number(attempt.score ?? 0);
-      el(`editFoundation`).value = Number(attempt.foundationScore ?? 0);
-      el(`editApplied`).value = Number(attempt.appliedScore ?? 0);
-      el(`editAdvanced`).value = Number(attempt.advancedScore ?? 0);
-      el(`editDocId`).value = attempt.id;
-      el(`editBackdrop`).classList.remove(`hidden`);
-      lucide.createIcons();
-    };
-
-    const closeEdit = () => {
-      state.editing = null;
-      el(`editBackdrop`).classList.add(`hidden`);
-    };
-
-    const clampInt = (value, min, max) => Math.max(min, Math.min(max, Number.parseInt(value,10) || 0));
-    const scoreLevel = (score) => score <= 5 ? `Beginner` : score <= 10 ? `Intermediate` : `Advanced`;
-
-    const saveEdit = async () => {
-      if (!state.editing) return;
-      const firstName = el(`editFirst`).value.trim();
-      const lastName = el(`editLast`).value.trim();
-      const score = clampInt(el(`editScore`).value,0,15);
-      const foundationScore = clampInt(el(`editFoundation`).value,0,5);
-      const appliedScore = clampInt(el(`editApplied`).value,0,5);
-      const advancedScore = clampInt(el(`editAdvanced`).value,0,5);
-      if (!firstName || !lastName) return showToast(`الاسم الأول واسم العائلة مطلوبان.`);
-      await updateDoc(doc(db,COLLECTION,state.editing.id),{
-        firstName,lastName,fullName:`${firstName} ${lastName}`,score,foundationScore,appliedScore,advancedScore,level:scoreLevel(score),adminEditedAt:new Date().toISOString()
-      });
-      closeEdit();
-      await loadResults();
-      showToast(`تم حفظ التعديل.`);
-    };
-
-    const deleteAttempt = async () => {
-      if (!state.editing) return;
-      if (!confirm(`حذف محاولة ${state.editing.mode?.toUpperCase()} لـ ${state.editing.fullName || ``}؟`)) return;
-      await deleteDoc(doc(db,COLLECTION,state.editing.id));
-      closeEdit();
-      await loadResults();
-      showToast(`تم حذف المحاولة.`);
-    };
-
-    const deletePerson = async (participantKey) => {
-      const person = state.people.find((p) => p.key === participantKey);
-      if (!person) return;
-      if (!confirm(`حذف جميع نتائج ${person.fullName} (Pre + Post)؟`)) return;
-      const targets = [person.pre,person.post].filter(Boolean);
-      await Promise.all(targets.map((attempt) => deleteDoc(doc(db,COLLECTION,attempt.id))));
-      await loadResults();
-      showToast(`تم حذف نتائج المشارك.`);
-    };
-
-    const deleteAll = async () => {
-      const pin = prompt(`للتأكيد النهائي، اكتب رمز الإدارة:`) || ``;
-      if (await sha256(pin.trim()) !== ADMIN_PIN_HASH) return showToast(`رمز الإدارة غير صحيح.`);
-      if (!confirm(`سيتم حذف جميع نتائج Pre وPost نهائياً. هل أنت متأكد؟`)) return;
-      await Promise.all(state.attempts.map((attempt) => deleteDoc(doc(db,COLLECTION,attempt.id))));
-      await loadResults();
-      showToast(`تم حذف جميع النتائج.`);
-    };
-
-    const exportCsv = () => {
-      if (!state.people.length) return;
-      const data = [[`Participant`,`Pre`,`Post`,`Gain`,`Foundation Pre`,`Foundation Post`,`Applied Pre`,`Applied Post`,`Advanced Pre`,`Advanced Post`]];
-      state.people.forEach((p) => {
-        const gain = p.pre && p.post ? Number(p.post.score)-Number(p.pre.score) : ``;
-        data.push([p.fullName,p.pre?.score ?? ``,p.post?.score ?? ``,gain,p.pre?.foundationScore ?? ``,p.post?.foundationScore ?? ``,p.pre?.appliedScore ?? ``,p.post?.appliedScore ?? ``,p.pre?.advancedScore ?? ``,p.post?.advancedScore ?? ``]);
-      });
-      const csv = data.map((row) => row.map((value) => `"${String(value).replaceAll(`"`,`""`)}"`).join(`,`)).join(`\n`);
-      const blob = new Blob([`\uFEFF${csv}`],{type:`text/csv;charset=utf-8;`});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement(`a`);
-      a.href=url;a.download=`Orange_Excel_Pre_Post_Results.csv`;a.click();URL.revokeObjectURL(url);
-    };
-
-    el(`loginBtn`).addEventListener(`click`,login);
-    el(`pinInput`).addEventListener(`keydown`,(event)=>{if(event.key===`Enter`)login();});
-    el(`logoutBtn`).addEventListener(`click`,()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload();});
-    el(`refreshBtn`).addEventListener(`click`,loadResults);
-    el(`exportBtn`).addEventListener(`click`,exportCsv);
-    el(`searchInput`).addEventListener(`input`,renderRows);
-    el(`closeEditBtn`).addEventListener(`click`,closeEdit);
-    el(`saveEditBtn`).addEventListener(`click`,saveEdit);
-    el(`deleteAttemptBtn`).addEventListener(`click`,deleteAttempt);
-    el(`deleteAllBtn`).addEventListener(`click`,deleteAll);
-    el(`editBackdrop`).addEventListener(`click`,(event)=>{if(event.target===el(`editBackdrop`))closeEdit();});
-
-    if (authorized()) showAdmin();
-    lucide.createIcons();
-  </script>
+<script type="module">
+const [firebaseAppModule,firebaseFirestoreModule]=await Promise.all([
+  import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),
+  import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
+]);
+const {initializeApp}=firebaseAppModule;
+const {getFirestore,collection,getDocs,doc,getDoc,setDoc,updateDoc,deleteDoc,serverTimestamp}=firebaseFirestoreModule;
+const firebaseConfig={apiKey:`AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,authDomain:`mobilehub-4eb1d.firebaseapp.com`,projectId:`mobilehub-4eb1d`,storageBucket:`mobilehub-4eb1d.firebasestorage.app`,messagingSenderId:`13420871425`,appId:`1:13420871425:web:e253fe9c5aebbc5925a500`,measurementId:`G-RYWYCQXBT8`};
+const app=initializeApp(firebaseConfig);const db=getFirestore(app);
+const COLLECTION=`orangeExcelAssessments`;const CONFIG_COLLECTION=`orangeExcelConfig`;const CONFIG_DOC=`site`;
+const ADMIN_SESSION=`coderzOrangeAdminSession`;const ADMIN_PIN_HASH=`9060ce5653093cd9bff480cb01ff0e3a790e6f545e214a3dd85841daabac7848`;
+const DEFAULT_CONFIG={assessmentPhase:`pre`,assessmentEnabled:true,siteLive:true,announcementEnabled:false,announcementText:``};
+const state={attempts:[],people:[],editing:null,config:{...DEFAULT_CONFIG}};const el=(id)=>document.getElementById(id);
+const sha256=async(value)=>{const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest(`SHA-256`,bytes);return[...new Uint8Array(digest)].map((b)=>b.toString(16).padStart(2,`0`)).join(``)};
+const toast=(message)=>{const t=el(`toast`);t.textContent=message;t.classList.add(`show`);setTimeout(()=>t.classList.remove(`show`),2300)};
+const authorized=()=>sessionStorage.getItem(ADMIN_SESSION)===`1`;
+const login=async()=>{const pin=el(`pinInput`).value.trim();if(await sha256(pin)!==ADMIN_PIN_HASH){el(`loginError`).textContent=`رمز الإدارة غير صحيح.`;el(`pinInput`).value=``;return}sessionStorage.setItem(ADMIN_SESSION,`1`);el(`loginError`).textContent=``;showAdmin()};
+const showAdmin=()=>{el(`loginView`).classList.add(`hidden`);el(`adminView`).classList.remove(`hidden`);loadConfig();loadResults();setUrls();lucide.createIcons()};
+const safeDate=(value)=>{if(!value)return null;if(value.toDate)return value.toDate();const d=new Date(value);return Number.isNaN(d.getTime())?null:d};
+const avg=(arr)=>arr.length?(arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1):`—`;
+const buildPeople=(attempts)=>{const map=new Map();attempts.forEach((attempt)=>{const key=attempt.participantKey||attempt.id;if(!map.has(key))map.set(key,{key,fullName:attempt.fullName||`${attempt.firstName||``} ${attempt.lastName||``}`.trim(),pre:null,post:null});const p=map.get(key);if(attempt.mode===`pre`||attempt.mode===`post`)p[attempt.mode]=attempt;if(attempt.fullName)p.fullName=attempt.fullName});return[...map.values()].sort((a,b)=>a.fullName.localeCompare(b.fullName,`ar`))};
+const updateMetrics=()=>{const pre=state.people.filter((p)=>p.pre).map((p)=>Number(p.pre.score||0));const post=state.people.filter((p)=>p.post).map((p)=>Number(p.post.score||0));const paired=state.people.filter((p)=>p.pre&&p.post);const gains=paired.map((p)=>Number(p.post.score||0)-Number(p.pre.score||0));el(`mParticipants`).textContent=state.people.length;el(`mPre`).textContent=pre.length?`${avg(pre)}/15`:`—`;el(`mPost`).textContent=post.length?`${avg(post)}/15`:`—`;el(`mGain`).textContent=gains.length?`${Number(avg(gains))>0?`+`:``}${avg(gains)}`:`—`;el(`mPaired`).textContent=paired.length};
+const scoreCell=(a,post=false)=>a?`<span class="pill${post?` post`:``}">${a.score}/15</span>`:`—`;const sectionCell=(pre,post,field)=>`${pre?pre[field]:`—`} / ${post?post[field]:`—`}`;
+const renderRows=()=>{const q=el(`searchInput`).value.trim().toLowerCase();const body=el(`rowsBody`);body.innerHTML=``;const people=state.people.filter((p)=>!q||p.fullName.toLowerCase().includes(q));el(`emptyState`).classList.toggle(`hidden`,people.length>0);people.forEach((person)=>{const pre=person.pre,post=person.post;const delta=pre&&post?Number(post.score||0)-Number(pre.score||0):null;const latest=[pre,post].filter(Boolean).map((x)=>safeDate(x.submittedAt||x.clientSubmittedAt)).filter(Boolean).sort((a,b)=>b-a)[0];const tr=document.createElement(`tr`);tr.innerHTML=`<td class="name">${person.fullName||`—`}</td><td>${scoreCell(pre)}</td><td>${scoreCell(post,true)}</td><td class="gain ${delta===null?``:delta>=0?`pos`:`neg`}">${delta===null?`—`:`${delta>0?`+`:``}${delta}`}</td><td>${sectionCell(pre,post,`foundationScore`)}</td><td>${sectionCell(pre,post,`appliedScore`)}</td><td>${sectionCell(pre,post,`advancedScore`)}</td><td>${latest?latest.toLocaleString(`en-GB`,{day:`2-digit`,month:`short`,hour:`2-digit`,minute:`2-digit`}):`—`}</td><td><div class="actions">${pre?`<button class="btn btn-ghost btn-small" data-edit="${pre.id}">Edit Pre</button>`:``}${post?`<button class="btn btn-ghost btn-small" data-edit="${post.id}">Edit Post</button>`:``}<button class="btn btn-danger btn-small" data-delete-person="${person.key}">Delete</button></div></td>`;body.appendChild(tr)});body.querySelectorAll(`[data-edit]`).forEach((b)=>b.addEventListener(`click`,()=>openEdit(b.dataset.edit)));body.querySelectorAll(`[data-delete-person]`).forEach((b)=>b.addEventListener(`click`,()=>deletePerson(b.dataset.deletePerson)));lucide.createIcons()};
+const loadResults=async()=>{try{const snapshot=await getDocs(collection(db,COLLECTION));state.attempts=snapshot.docs.map((item)=>({id:item.id,...item.data()}));state.people=buildPeople(state.attempts);updateMetrics();renderRows()}catch(error){console.error(error);toast(`تعذر قراءة النتائج.`)}};
+const openEdit=(id)=>{const a=state.attempts.find((x)=>x.id===id);if(!a)return;state.editing=a;el(`editFirst`).value=a.firstName||``;el(`editLast`).value=a.lastName||``;el(`editMode`).value=a.mode||``;el(`editScore`).value=Number(a.score??0);el(`editFoundation`).value=Number(a.foundationScore??0);el(`editApplied`).value=Number(a.appliedScore??0);el(`editAdvanced`).value=Number(a.advancedScore??0);el(`editDocId`).value=a.id;el(`editBackdrop`).classList.remove(`hidden`)};
+const closeEdit=()=>{state.editing=null;el(`editBackdrop`).classList.add(`hidden`)};const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number.parseInt(v,10)||0));const scoreLevel=(s)=>s<=5?`Beginner`:s<=10?`Intermediate`:`Advanced`;
+const saveEdit=async()=>{if(!state.editing)return;const firstName=el(`editFirst`).value.trim(),lastName=el(`editLast`).value.trim();if(!firstName||!lastName)return toast(`الاسم مطلوب.`);const score=clamp(el(`editScore`).value,0,15),foundationScore=clamp(el(`editFoundation`).value,0,5),appliedScore=clamp(el(`editApplied`).value,0,5),advancedScore=clamp(el(`editAdvanced`).value,0,5);await updateDoc(doc(db,COLLECTION,state.editing.id),{firstName,lastName,fullName:`${firstName} ${lastName}`,score,foundationScore,appliedScore,advancedScore,level:scoreLevel(score),adminEditedAt:new Date().toISOString()});closeEdit();await loadResults();toast(`تم حفظ التعديل.`)};
+const deleteAttempt=async()=>{if(!state.editing)return;if(!confirm(`حذف محاولة ${state.editing.mode?.toUpperCase()}؟`))return;await deleteDoc(doc(db,COLLECTION,state.editing.id));closeEdit();await loadResults();toast(`تم حذف المحاولة.`)};
+const deletePerson=async(key)=>{const p=state.people.find((x)=>x.key===key);if(!p||!confirm(`حذف نتائج ${p.fullName} كاملة؟`))return;await Promise.all([p.pre,p.post].filter(Boolean).map((a)=>deleteDoc(doc(db,COLLECTION,a.id))));await loadResults();toast(`تم حذف النتائج.`)};
+const deleteAll=async()=>{const pin=prompt(`اكتب رمز الإدارة للتأكيد:`)||``;if(await sha256(pin.trim())!==ADMIN_PIN_HASH)return toast(`رمز غير صحيح.`);if(!confirm(`حذف جميع النتائج نهائياً؟`))return;await Promise.all(state.attempts.map((a)=>deleteDoc(doc(db,COLLECTION,a.id))));await loadResults();toast(`تم حذف كل النتائج.`)};
+const exportCsv=()=>{if(!state.people.length)return;const data=[[`Participant`,`Pre`,`Post`,`Gain`,`Foundation Pre`,`Foundation Post`,`Applied Pre`,`Applied Post`,`Advanced Pre`,`Advanced Post`]];state.people.forEach((p)=>{const gain=p.pre&&p.post?Number(p.post.score)-Number(p.pre.score):``;data.push([p.fullName,p.pre?.score??``,p.post?.score??``,gain,p.pre?.foundationScore??``,p.post?.foundationScore??``,p.pre?.appliedScore??``,p.post?.appliedScore??``,p.pre?.advancedScore??``,p.post?.advancedScore??``])});const csv=data.map((row)=>row.map((v)=>`"${String(v).replaceAll(`"`,`""`)}"`).join(`,`)).join(`\n`);const blob=new Blob([`\uFEFF${csv}`],{type:`text/csv;charset=utf-8;`});const url=URL.createObjectURL(blob);const a=document.createElement(`a`);a.href=url;a.download=`Orange_Excel_Pre_Post_Results.csv`;a.click();URL.revokeObjectURL(url)};
+const phaseLabel=(phase)=>phase===`post`?`POST`:phase===`closed`?`CLOSED`:`PRE`;
+const renderConfig=()=>{const c=state.config;el(`cfgAssessmentEnabled`).checked=!!c.assessmentEnabled;el(`cfgSiteLive`).checked=!!c.siteLive;el(`cfgAnnouncementEnabled`).checked=!!c.announcementEnabled;el(`cfgAnnouncementText`).value=c.announcementText||``;document.querySelectorAll(`[data-phase]`).forEach((b)=>b.classList.toggle(`active`,b.dataset.phase===c.assessmentPhase));const phase=el(`currentPhase`);phase.textContent=phaseLabel(c.assessmentPhase);phase.className=`phase ${c.assessmentPhase}`;el(`currentStatus`).textContent=c.siteLive?`Portal Live`:`Maintenance Mode`;el(`previewTitle`).textContent=c.assessmentPhase===`post`?`Post-Assessment`:c.assessmentPhase===`closed`?`Assessment Closed`:`Pre-Assessment`;el(`previewText`).textContent=c.announcementEnabled&&c.announcementText?c.announcementText:(c.assessmentPhase===`post`?`التقييم النهائي مفتوح الآن.`:c.assessmentPhase===`closed`?`التقييم مغلق حالياً.`:`التقييم المبدئي مفتوح الآن.`)};
+const loadConfig=async()=>{try{const snap=await getDoc(doc(db,CONFIG_COLLECTION,CONFIG_DOC));state.config=snap.exists()?{...DEFAULT_CONFIG,...snap.data()}:{...DEFAULT_CONFIG};if(!snap.exists())await setDoc(doc(db,CONFIG_COLLECTION,CONFIG_DOC),{...DEFAULT_CONFIG,updatedAt:serverTimestamp()});renderConfig()}catch(error){console.error(error);state.config={...DEFAULT_CONFIG};renderConfig();toast(`تعذر قراءة إعدادات الموقع.`)}};
+const saveConfig=async()=>{state.config={assessmentPhase:state.config.assessmentPhase||`pre`,assessmentEnabled:el(`cfgAssessmentEnabled`).checked,siteLive:el(`cfgSiteLive`).checked,announcementEnabled:el(`cfgAnnouncementEnabled`).checked,announcementText:el(`cfgAnnouncementText`).value.trim()};await setDoc(doc(db,CONFIG_COLLECTION,CONFIG_DOC),{...state.config,updatedAt:serverTimestamp()},{merge:true});renderConfig();toast(`تم تحديث الموقع فوراً.`)};
+const resetConfig=async()=>{state.config={...DEFAULT_CONFIG};await setDoc(doc(db,CONFIG_COLLECTION,CONFIG_DOC),{...state.config,updatedAt:serverTimestamp()},{merge:true});renderConfig();toast(`رجعت الإعدادات الافتراضية.`)};
+const setUrls=()=>{const site=new URL(`../../`,window.location.href);const assessment=new URL(`../`,window.location.href);el(`publicUrl`).textContent=site.href;el(`preUrl`).textContent=`${assessment.href}?mode=pre&force=1`;el(`postUrl`).textContent=`${assessment.href}?mode=post&force=1`;el(`adminUrl`).textContent=window.location.href};
+const copyKey=async(key)=>{const map={public:el(`publicUrl`).textContent,pre:el(`preUrl`).textContent,post:el(`postUrl`).textContent,admin:el(`adminUrl`).textContent};await navigator.clipboard.writeText(map[key]||``);toast(`تم نسخ الرابط.`)};
+document.querySelectorAll(`[data-tab]`).forEach((b)=>b.addEventListener(`click`,()=>{document.querySelectorAll(`[data-tab]`).forEach((x)=>x.classList.toggle(`active`,x===b));document.querySelectorAll(`.panel`).forEach((p)=>p.classList.remove(`active`));el(`panel-${b.dataset.tab}`).classList.add(`active`);lucide.createIcons()}));
+document.querySelectorAll(`[data-phase]`).forEach((b)=>b.addEventListener(`click`,()=>{state.config.assessmentPhase=b.dataset.phase;renderConfig()}));document.querySelectorAll(`[data-copy]`).forEach((b)=>b.addEventListener(`click`,()=>copyKey(b.dataset.copy)));
+el(`loginBtn`).addEventListener(`click`,login);el(`pinInput`).addEventListener(`keydown`,(e)=>{if(e.key===`Enter`)login()});el(`logoutBtn`).addEventListener(`click`,()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload()});el(`refreshBtn`).addEventListener(`click`,loadResults);el(`exportBtn`).addEventListener(`click`,exportCsv);el(`searchInput`).addEventListener(`input`,renderRows);el(`closeEditBtn`).addEventListener(`click`,closeEdit);el(`saveEditBtn`).addEventListener(`click`,saveEdit);el(`deleteAttemptBtn`).addEventListener(`click`,deleteAttempt);el(`deleteAllBtn`).addEventListener(`click`,deleteAll);el(`editBackdrop`).addEventListener(`click`,(e)=>{if(e.target===el(`editBackdrop`))closeEdit()});el(`saveConfigBtn`).addEventListener(`click`,saveConfig);el(`resetConfigBtn`).addEventListener(`click`,resetConfig);el(`cfgAnnouncementText`).addEventListener(`input`,()=>{state.config.announcementText=el(`cfgAnnouncementText`).value;renderConfig()});el(`cfgAnnouncementEnabled`).addEventListener(`change`,()=>{state.config.announcementEnabled=el(`cfgAnnouncementEnabled`).checked;renderConfig()});
+if(authorized())showAdmin();lucide.createIcons();
+</script>
 </body>
 </html>

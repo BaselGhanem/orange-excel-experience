@@ -7,8 +7,14 @@ service cloud.firestore {
       allow create, read, update, delete: if true;
     }
 
+    match /orangeExcelAttendance/{attendanceId} {
+      // Closed-course attendance for the three training days.
+      // Kept permissive for this workshop; move writes behind Firebase Auth for permanent use.
+      allow create, read, update, delete: if true;
+    }
+
     match /orangeExcelConfig/{configId} {
-      // Site/assessment live controls used by the trainer dashboard and participant pages.
+      // Site/assessment/attendance live controls used by the trainer dashboard and participant pages.
       // Kept permissive for this closed training event; move writes behind Firebase Auth for permanent use.
       allow read, create, update, delete: if true;
     }

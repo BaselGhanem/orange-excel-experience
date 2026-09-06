@@ -1,5 +1,17 @@
 export class FormulaMotionEngine {
-  constructor({ stage, caption, progress, sceneCounter, modeIndicator, modeText, stageEyebrow }) {
+  constructor({
+    stage,
+    caption,
+    progress,
+    sceneCounter,
+    modeIndicator,
+    modeText,
+    stageEyebrow,
+    stepBack,
+    stepNext,
+    stepNextLabel,
+    motionCounter
+  }) {
     this.stage = stage;
     this.caption = caption;
     this.progress = progress;
@@ -7,10 +19,18 @@ export class FormulaMotionEngine {
     this.modeIndicator = modeIndicator;
     this.modeText = modeText;
     this.stageEyebrow = stageEyebrow;
+    this.stepBack = stepBack;
+    this.stepNext = stepNext;
+    this.stepNextLabel = stepNextLabel;
+    this.motionCounter = motionCounter;
     this.formula = null;
     this.timers = [];
-    this.runId = 0;
     this.sceneIndex = 0;
+    this.stepIndex = 0;
+    this.currentScene = null;
+    this.currentSteps = [];
+    this.isBusy = false;
+    this.sceneFactories = [];
   }
 
   setFormula(formula) {
@@ -25,6 +45,28 @@ export class FormulaMotionEngine {
     document.body.dataset.motion = formula.identity.motion;
     this.stage.dataset.formula = formula.id;
     this.stageEyebrow.textContent = `EXCEL FORMULA · ${String(formula.order).padStart(2, `0`)} · ${formula.identity.mood.toUpperCase()}`;
+    this.sceneFactories = [
+      () => this.buildIntroScene(),
+      () => this.buildAnatomyScene(),
+      () => this.buildDatasetScene(),
+      () => this.buildWorkedScene(this.formula.basic),
+      () => this.buildBasicResultScene(),
+      () => this.buildHardTransitionScene(),
+      () => this.buildWorkedScene(this.formula.hard),
+      () => this.buildOutroScene()
+    ];
+  }
+
+  start() {
+    if (!this.formula) return;
+    this.clearTimers();
+    this.setMode(`basic`);
+    this.sceneIndex = 0;
+    this.renderScene(0);
+  }
+
+  replay() {
+    this.start();
   }
 
   clearTimers() {
@@ -39,30 +81,73 @@ export class FormulaMotionEngine {
     return id;
   }
 
-  async play() {
-    if (!this.formula) return;
+  renderScene(index, { restoreSteps = 0 } = {}) {
     this.clearTimers();
-    this.runId += 1;
-    const runId = this.runId;
-    this.setMode(`basic`);
+    this.sceneIndex = index;
+    this.stepIndex = 0;
+    const built = this.sceneFactories[index]();
+    this.currentScene = built.scene;
+    this.currentSteps = built.steps;
+    this.updateSceneMeta(index, this.sceneFactories.length);
 
-    const sequence = [
-      () => this.sceneIntro(),
-      () => this.sceneAnatomy(),
-      () => this.sceneDataset(),
-      () => this.sceneWorkedExample(this.formula.basic),
-      () => this.sceneBasicResult(),
-      () => this.sceneHardTransition(),
-      () => this.sceneWorkedExample(this.formula.hard),
-      () => this.sceneOutro()
-    ];
+    if (restoreSteps > 0) {
+      this.currentScene.classList.add(`is-restoring`);
+      for (let i = 0; i < restoreSteps; i += 1) {
+        this.currentSteps[i]?.run(true);
+      }
+      this.stepIndex = Math.min(restoreSteps, this.currentSteps.length);
+      requestAnimationFrame(() => this.currentScene?.classList.remove(`is-restoring`));
+    }
 
-    for (let index = 0; index < sequence.length; index += 1) {
-      if (runId !== this.runId) return;
-      this.sceneIndex = index;
-      this.updateSceneMeta(index, sequence.length);
-      const duration = sequence[index]();
-      await this.wait(duration);
+    this.updateDirectorUI();
+  }
+
+  async nextStep() {
+    if (this.isBusy || !this.formula) return;
+    this.pulseControl(this.stepNext);
+
+    if (this.stepIndex < this.currentSteps.length) {
+      const step = this.currentSteps[this.stepIndex];
+      this.stepIndex += 1;
+      this.isBusy = true;
+      this.updateDirectorUI();
+      try {
+        const duration = Number(step.run(false)) || 0;
+        if (duration > 0) await this.wait(Math.min(duration, 1100));
+      } finally {
+        this.isBusy = false;
+        this.updateDirectorUI();
+      }
+      return;
+    }
+
+    if (this.sceneIndex < this.sceneFactories.length - 1) {
+      this.renderScene(this.sceneIndex + 1);
+      return;
+    }
+
+    this.pulseStage(`complete`);
+  }
+
+  previousStep() {
+    if (this.isBusy || !this.formula) return;
+    this.pulseControl(this.stepBack);
+
+    if (this.stepIndex > 0) {
+      const target = this.stepIndex - 1;
+      this.renderScene(this.sceneIndex, { restoreSteps: target });
+      return;
+    }
+
+    if (this.sceneIndex > 0) {
+      const previousIndex = this.sceneIndex - 1;
+      this.renderScene(previousIndex);
+      const previousLength = this.currentSteps.length;
+      this.currentScene.classList.add(`is-restoring`);
+      for (let i = 0; i < previousLength; i += 1) this.currentSteps[i]?.run(true);
+      this.stepIndex = previousLength;
+      requestAnimationFrame(() => this.currentScene?.classList.remove(`is-restoring`));
+      this.updateDirectorUI();
     }
   }
 
@@ -75,12 +160,50 @@ export class FormulaMotionEngine {
     this.progress.style.width = `${((index + 1) / total) * 100}%`;
   }
 
+  updateDirectorUI() {
+    if (!this.stepNext || !this.stepNextLabel || !this.motionCounter) return;
+    const atSceneEnd = this.stepIndex >= this.currentSteps.length;
+    const atExperienceEnd = atSceneEnd && this.sceneIndex >= this.sceneFactories.length - 1;
+    const nextSceneName = this.sceneName(this.sceneIndex + 1);
+
+    if (atExperienceEnd) {
+      this.stepNextLabel.textContent = `Formula Complete`;
+      this.motionCounter.textContent = `DONE`;
+      this.stepNext.classList.add(`is-complete`);
+    } else if (atSceneEnd) {
+      this.stepNextLabel.textContent = `Enter ${nextSceneName}`;
+      this.motionCounter.textContent = `NEXT SCENE`;
+      this.stepNext.classList.remove(`is-complete`);
+    } else {
+      const step = this.currentSteps[this.stepIndex];
+      this.stepNextLabel.textContent = step?.label ?? `Next Motion`;
+      this.motionCounter.textContent = `${String(this.stepIndex + 1).padStart(2, `0`)} / ${String(this.currentSteps.length).padStart(2, `0`)}`;
+      this.stepNext.classList.remove(`is-complete`);
+    }
+
+    this.stepBack.disabled = this.sceneIndex === 0 && this.stepIndex === 0;
+    this.stepNext.disabled = this.isBusy;
+  }
+
+  sceneName(index) {
+    return [`Intro`, `Syntax`, `Dataset`, `Basic Example`, `Basic Result`, `Hard Mode`, `Hard Example`, `Completion`][index] ?? `Next Scene`;
+  }
+
+  pulseControl(control) {
+    if (!control) return;
+    control.classList.remove(`is-fired`);
+    void control.offsetWidth;
+    control.classList.add(`is-fired`);
+  }
+
+  pulseStage(kind = `motion`) {
+    this.stage.dataset.pulse = kind;
+    this.later(() => delete this.stage.dataset.pulse, 520);
+  }
+
   setCaption(text = ``) {
-    this.caption.style.opacity = `0`;
-    this.later(() => {
-      this.caption.textContent = text;
-      this.caption.style.opacity = `1`;
-    }, 120);
+    this.caption.textContent = text;
+    this.caption.style.opacity = `1`;
   }
 
   setMode(mode) {
@@ -100,13 +223,18 @@ export class FormulaMotionEngine {
     this.stage.append(wrapper);
 
     requestAnimationFrame(() => wrapper.classList.add(`is-active`));
-    this.later(() => previous?.remove(), 680);
+    window.setTimeout(() => previous?.remove(), 680);
     return wrapper;
   }
 
-  sceneIntro() {
+  step(label, run) {
+    return { label, run };
+  }
+
+  buildIntroScene() {
     const f = this.formula;
-    this.setCaption(`${f.identity.eyebrow}. Watch the logic become visible before the formula is complete.`);
+    this.setMode(`basic`);
+    this.setCaption(`You control every motion. Reveal the formula one teaching beat at a time.`);
     const scene = this.mount(`
       <div class="intro-lockup">
         <div class="intro-orbit" aria-hidden="true"></div>
@@ -119,20 +247,36 @@ export class FormulaMotionEngine {
       </div>
     `, `intro-scene`);
 
-    this.later(() => scene.classList.add(`intro-ready`), 80);
-    scene.querySelectorAll(`.syntax-token`).forEach((token, index) => {
-      this.later(() => token.classList.add(`is-lit`), 1250 + index * 90);
-    });
-    return 3600;
+    const steps = [
+      this.step(`Reveal ${f.displayName}`, (instant) => {
+        scene.classList.add(`intro-title-ready`);
+        this.pulseStage();
+        return instant ? 0 : 850;
+      }),
+      this.step(`Reveal formula identity`, (instant) => {
+        scene.classList.add(`intro-sub-ready`);
+        return instant ? 0 : 600;
+      }),
+      this.step(`Open syntax`, (instant) => {
+        scene.classList.add(`intro-syntax-ready`);
+        return instant ? 0 : 650;
+      }),
+      ...f.syntaxParts.map((part, index) => this.step(`Light syntax · ${String(index + 1).padStart(2, `0`)}`, (instant) => {
+        scene.querySelector(`[data-token="${index}"]`)?.classList.add(`is-lit`);
+        return instant ? 0 : 360;
+      }))
+    ];
+    return { scene, steps };
   }
 
-  sceneAnatomy() {
+  buildAnatomyScene() {
     const f = this.formula;
-    this.setCaption(`Every argument has one job. Read the roles before reading the punctuation.`);
+    this.setMode(`basic`);
+    this.setCaption(`Each click isolates one argument and gives it one clear job.`);
     const title = this.escape(f.identity.anatomyTitle).replaceAll(`\n`, `<br>`);
     const scene = this.mount(`
       <div class="anatomy-layout">
-        <div>
+        <div class="anatomy-copy-block">
           <div class="scene__kicker">Syntax anatomy</div>
           <h2 class="scene__title anatomy-title">${title}</h2>
           <p class="scene__copy">${this.escape(f.identity.anatomyCopy)}</p>
@@ -153,15 +297,18 @@ export class FormulaMotionEngine {
       </div>
     `, `anatomy-scene`);
 
-    scene.querySelectorAll(`[data-arg-card]`).forEach((card, index) => {
-      this.later(() => card.classList.add(`is-visible`), 360 + index * 260);
-    });
-    return 3900;
+    const steps = f.arguments.map((arg, index) => this.step(`Explain ${arg.name}`, (instant) => {
+      scene.querySelectorAll(`[data-arg-card]`).forEach((card, cardIndex) => card.classList.toggle(`is-focused-card`, cardIndex === index));
+      scene.querySelector(`[data-arg-card="${index}"]`)?.classList.add(`is-visible`);
+      return instant ? 0 : 560;
+    }));
+    return { scene, steps };
   }
 
-  sceneDataset() {
+  buildDatasetScene() {
     const { dataset } = this.formula;
-    this.setCaption(`The table is the stage. Column names stay visible while the formula moves through the data.`);
+    this.setMode(`basic`);
+    this.setCaption(`Column headers stay visible. You decide when the data is revealed and where attention moves.`);
     const scene = this.mount(`
       <div class="worked-layout dataset-only">
         <div class="data-panel data-panel--showcase">
@@ -169,31 +316,31 @@ export class FormulaMotionEngine {
             <span class="panel-label">Training dataset</span>
             <span class="data-panel__badge">${this.escape(dataset.range)}</span>
           </div>
-          <div class="sheet-wrap">
-            ${this.renderTable()}
-          </div>
+          <div class="sheet-wrap">${this.renderTable()}</div>
         </div>
       </div>
     `, `dataset-scene`);
-    const sheet = scene.querySelector(`.sheet-wrap`);
-    this.later(() => sheet.classList.add(`is-visible`), 160);
-    (dataset.focusColumns ?? []).forEach((column, index) => {
-      this.later(() => {
+
+    const focusColumns = dataset.focusColumns ?? dataset.columns.slice(0, 2).map((column) => column.key);
+    const steps = [
+      this.step(`Reveal dataset`, (instant) => {
+        scene.querySelector(`.sheet-wrap`)?.classList.add(`is-visible`);
+        return instant ? 0 : 700;
+      }),
+      ...focusColumns.map((column) => this.step(`Focus ${this.columnLabel(column)}`, (instant) => {
         this.clearTableState(scene);
         this.highlightColumn(scene, column);
-      }, 1050 + index * 900);
-    });
-    return 3500;
+        return instant ? 0 : 480;
+      }))
+    ];
+    return { scene, steps };
   }
 
-  sceneWorkedExample(example) {
+  buildWorkedScene(example) {
     this.setMode(example.mode);
     const hard = example.mode === `hard`;
     const visual = example.visual;
-    this.setCaption(hard
-      ? `${this.formula.displayName} Hard Mode: the same architecture, with more logic attached.`
-      : `${this.formula.displayName} Basic Mode: watch each argument connect to the dataset.`
-    );
+    this.setCaption(`${hard ? `Hard` : `Basic`} Mode is now click-controlled. Trigger each logical beat when you are ready.`);
 
     const scene = this.mount(`
       <div class="worked-layout worked-layout--${visual.type}">
@@ -202,30 +349,22 @@ export class FormulaMotionEngine {
             <span class="panel-label">Live data</span>
             <span class="data-panel__badge">${hard ? `HARD MODE` : `BASIC MODE`}</span>
           </div>
-          <div class="sheet-wrap">
-            ${this.renderTable()}
-          </div>
+          <div class="sheet-wrap">${this.renderTable()}</div>
         </div>
-
         <aside class="formula-panel">
           <div class="task-card">
             <div class="task-card__label">Task</div>
             <div class="task-card__text">${this.escape(example.task)}</div>
             <div class="logic-line">${this.renderLogicLine(example)}</div>
           </div>
-
           <div class="formula-build">
             <div class="formula-build__label">Formula assembly</div>
             <div class="formula-code" aria-label="Formula being assembled">
               ${example.pieces.map((piece, index) => `<span class="formula-piece ${piece.accent ? `is-accent` : ``}" data-piece="${index}">${this.escape(piece.text)}</span>`).join(``)}
             </div>
-            <div class="step-note" data-step-note>Reading the dataset…</div>
+            <div class="step-note" data-step-note>Waiting for your next motion…</div>
           </div>
-
-          <div class="micro-visual micro-visual--${visual.type}" data-micro-visual>
-            ${this.renderMicroVisual(example)}
-          </div>
-
+          <div class="micro-visual micro-visual--${visual.type}" data-micro-visual>${this.renderMicroVisual(example)}</div>
           <div class="result-card" data-result-card>
             <div class="result-card__meta">
               <div class="result-card__label">Result</div>
@@ -237,309 +376,366 @@ export class FormulaMotionEngine {
       </div>
     `, `worked-scene`);
 
-    this.later(() => scene.querySelector(`.sheet-wrap`)?.classList.add(`is-visible`), 120);
-    this.later(() => scene.querySelector(`.task-card`)?.classList.add(`is-visible`), 260);
+    const baseSteps = [
+      this.step(`Reveal task`, (instant) => {
+        scene.querySelector(`.task-card`)?.classList.add(`is-visible`);
+        return instant ? 0 : 520;
+      }),
+      this.step(`Reveal live data`, (instant) => {
+        scene.querySelector(`.sheet-wrap`)?.classList.add(`is-visible`);
+        return instant ? 0 : 650;
+      })
+    ];
 
-    const duration = this.animateWorkedExample(scene, example);
-    return duration;
+    return { scene, steps: [...baseSteps, ...this.workedSteps(scene, example)] };
   }
 
-  sceneBasicResult() {
+  workedSteps(scene, example) {
+    switch (example.visual.type) {
+      case `aggregate`: return this.aggregateSteps(scene, example);
+      case `count`: return this.countSteps(scene, example);
+      case `lookup`: return this.lookupSteps(scene, example);
+      case `logic`: return this.logicSteps(scene, example);
+      case `threshold`: return this.thresholdSteps(scene, example);
+      case `filter`: return this.filterSteps(scene, example);
+      default: return this.genericSteps(scene, example);
+    }
+  }
+
+  aggregateSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    const sumIndex = this.columnIndex(visual.sum.column);
+    return [
+      this.step(`Select sum_range`, (instant) => {
+        this.clearTableState(scene);
+        this.highlightColumn(scene, visual.sum.column);
+        note.textContent = `sum_range → ${visual.sum.range}. These are the values Excel is allowed to add.`;
+        this.revealPieces(scene, [0, 1]);
+        return instant ? 0 : 520;
+      }),
+      ...visual.criteria.map((criterion, index) => this.step(`Apply criterion ${index + 1}`, (instant) => {
+        this.clearTableState(scene);
+        this.highlightColumn(scene, criterion.column);
+        this.activateChip(scene, index);
+        note.textContent = `criteria_range${index + 1} → ${criterion.range}. Match “${criterion.value}”.`;
+        this.revealProgress(scene, example, index + 1, visual.criteria.length + 2);
+        return instant ? 0 : 520;
+      })),
+      this.step(`Lock matching rows`, (instant) => {
+        this.clearTableState(scene);
+        this.applyMatches(scene, visual.matchedRows, sumIndex);
+        this.revealAllPieces(scene, example);
+        this.setEquation(scene, visual.matchedValues.join(` + `));
+        note.textContent = visual.criteria.length > 1 ? `Only rows satisfying ALL conditions remain active.` : `Only matching rows remain active.`;
+        return instant ? 0 : 600;
+      }),
+      this.step(`Combine matched values`, (instant) => {
+        note.textContent = `Now combine only the highlighted Sales values.`;
+        if (!instant) this.flyMatchedValues(scene, visual.matchedRows, sumIndex);
+        return instant ? 0 : 900;
+      }),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealResult(scene, `${visual.matchedValues.join(` + `)} = ${example.resultDisplay}`);
+        return instant ? 0 : 700;
+      })
+    ];
+  }
+
+  countSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    return [
+      ...visual.criteria.map((criterion, index) => this.step(`Test ${this.columnLabel(criterion.column)}`, (instant) => {
+        this.clearTableState(scene);
+        this.highlightColumn(scene, criterion.column);
+        this.activateChip(scene, index);
+        note.textContent = `${criterion.range} tests ${this.columnLabel(criterion.column)} for “${criterion.value}”.`;
+        this.revealProgress(scene, example, index + 1, visual.criteria.length + 1);
+        return instant ? 0 : 520;
+      })),
+      this.step(`Lock matching rows`, (instant) => {
+        this.clearTableState(scene);
+        this.applyMatches(scene, visual.matchedRows);
+        this.revealAllPieces(scene, example);
+        note.textContent = `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} survived the tests.`;
+        return instant ? 0 : 560;
+      }),
+      this.step(`Count survivors`, (instant) => {
+        note.textContent = `Each surviving row contributes exactly +1.`;
+        if (instant) {
+          const counter = scene.querySelector(`[data-count-value]`);
+          if (counter) counter.textContent = String(visual.matchedRows.length);
+        } else {
+          this.flyRowsToResult(scene, visual.matchedRows);
+          this.animateCounter(scene, visual.matchedRows.length);
+        }
+        return instant ? 0 : 900;
+      }),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealResult(scene, `COUNT = ${example.resultDisplay}`);
+        return instant ? 0 : 650;
+      })
+    ];
+  }
+
+  lookupSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    const returnIndex = this.columnIndex(visual.returnColumn);
+    const steps = [
+      this.step(`Scan lookup_array`, (instant) => {
+        this.highlightColumn(scene, visual.lookupColumn);
+        this.activateChip(scene, 0);
+        this.revealPieces(scene, [0, 1, 2, 3]);
+        note.textContent = `lookup_array → ${visual.lookupRange}. Scan for “${visual.lookupValue}”.`;
+        if (instant) {
+          scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-scan`);
+        } else {
+          this.scanColumn(scene, visual.lookupColumn, visual.matchedRow);
+        }
+        return instant ? 0 : 1000;
+      }),
+      this.step(`Lock the match`, (instant) => {
+        this.clearTableState(scene);
+        this.focusRow(scene, visual.matchedRow);
+        scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
+        this.setLookupTrack(scene, `MATCH`, visual.lookupValue);
+        note.textContent = `Match locked on row ${visual.matchedRow + 2}. Keep the row alignment.`;
+        return instant ? 0 : 560;
+      }),
+      this.step(`Retrieve ${this.columnLabel(visual.returnColumn)}`, (instant) => {
+        this.clearTableState(scene);
+        this.focusRow(scene, visual.matchedRow);
+        this.highlightColumn(scene, visual.returnColumn);
+        scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.returnColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
+        this.activateChip(scene, 1);
+        this.revealProgress(scene, example, 2, 3);
+        this.setLookupTrack(scene, `RETURN`, this.cellDisplay(this.formula.dataset.rows[visual.matchedRow][visual.returnColumn], this.formula.dataset.columns[returnIndex]));
+        note.textContent = `return_array → ${visual.returnRange}. Retrieve the value from the same row.`;
+        return instant ? 0 : 600;
+      })
+    ];
+
+    if (visual.fallback || visual.exact) {
+      steps.push(this.step(`Apply lookup options`, (instant) => {
+        this.revealAllPieces(scene, example);
+        note.textContent = `${visual.fallback ? `Fallback = “${visual.fallback}”. ` : ``}${visual.exact ? `Match mode 0 forces an exact match.` : ``}`;
+        return instant ? 0 : 480;
+      }));
+    }
+
+    steps.push(
+      this.step(`Send value to result`, (instant) => {
+        this.revealAllPieces(scene, example);
+        if (!instant) this.flyCellToResult(scene, visual.matchedRow, returnIndex);
+        return instant ? 0 : 900;
+      }),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealResult(scene, `Retrieved → ${example.resultDisplay}`);
+        return instant ? 0 : 650;
+      })
+    );
+    return steps;
+  }
+
+  logicSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    return [
+      this.step(`Focus target record`, (instant) => {
+        this.focusRow(scene, visual.targetRow);
+        this.revealPieces(scene, [0]);
+        note.textContent = `Evaluate only the highlighted record. Each check feeds the decision gate.`;
+        return instant ? 0 : 520;
+      }),
+      ...visual.checks.map((check, index) => this.step(`Evaluate check ${index + 1}`, (instant) => {
+        this.clearTableState(scene);
+        this.focusRow(scene, visual.targetRow);
+        check.columns.forEach((column) => this.highlightCell(scene, visual.targetRow, column));
+        scene.querySelector(`[data-decision-check="${index}"]`)?.classList.add(check.passed ? `is-pass` : `is-fail`);
+        note.textContent = `${check.label} → ${check.passed ? `TRUE` : `FALSE`}`;
+        this.revealProgress(scene, example, index + 1, visual.checks.length + 1);
+        return instant ? 0 : 520;
+      })),
+      this.step(`Choose ${visual.branch.toUpperCase()} branch`, (instant) => {
+        this.revealAllPieces(scene, example);
+        scene.querySelector(`[data-decision-gate]`)?.classList.add(visual.branch === `true` ? `choose-true` : `choose-false`);
+        note.textContent = `The logical test resolves to ${visual.branch.toUpperCase()}. Follow that branch.`;
+        return instant ? 0 : 650;
+      }),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealResult(scene, `${visual.branch.toUpperCase()} → ${example.resultDisplay}`);
+        return instant ? 0 : 650;
+      })
+    ];
+  }
+
+  thresholdSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    return [
+      this.step(`Read input ${visual.valueDisplay}`, (instant) => {
+        this.focusRow(scene, visual.targetRow);
+        this.highlightCell(scene, visual.targetRow, visual.valueColumn);
+        this.revealPieces(scene, [0]);
+        scene.querySelector(`[data-threshold-value]`)?.classList.add(`is-live`);
+        note.textContent = `Start with ${visual.valueDisplay}. IFS tests thresholds from left to right.`;
+        return instant ? 0 : 520;
+      }),
+      ...visual.bands.slice(0, visual.selectedIndex + 1).map((band, index) => this.step(`Test ${band.test}`, (instant) => {
+        const selected = index === visual.selectedIndex;
+        scene.querySelector(`[data-band="${index}"]`)?.classList.add(selected ? `is-selected` : `is-failed`);
+        for (let laterIndex = index + 1; laterIndex < visual.bands.length; laterIndex += 1) {
+          scene.querySelector(`[data-band="${laterIndex}"]`)?.classList.add(`is-waiting`);
+        }
+        note.textContent = selected
+          ? `${visual.valueDisplay} satisfies ${band.test}. Stop here → ${band.label}.`
+          : `${band.test} → FALSE. Move to the next test.`;
+        this.revealProgress(scene, example, index + 1, visual.bands.length);
+        return instant ? 0 : 540;
+      })),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealAllPieces(scene, example);
+        this.revealResult(scene, `First TRUE → ${example.resultDisplay}`);
+        return instant ? 0 : 650;
+      })
+    ];
+  }
+
+  filterSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    return [
+      this.step(`Define FILTER array`, (instant) => {
+        scene.querySelectorAll(`tbody tr`).forEach((row) => row.classList.add(`filter-ready`));
+        this.revealPieces(scene, [0, 1]);
+        note.textContent = `array → ${this.formula.dataset.range.replace(`1`, `2`)}. This is the table FILTER may return.`;
+        return instant ? 0 : 520;
+      }),
+      ...visual.criteria.map((criterion, index) => this.step(`Apply include test ${index + 1}`, (instant) => {
+        this.clearTableState(scene);
+        this.highlightColumn(scene, criterion.column);
+        this.activateChip(scene, index);
+        note.textContent = `include test ${index + 1}: ${this.columnLabel(criterion.column)} = “${criterion.value}”.`;
+        this.revealProgress(scene, example, index + 1, visual.criteria.length + 2);
+        return instant ? 0 : 520;
+      })),
+      this.step(`Keep TRUE rows`, (instant) => {
+        this.clearTableState(scene);
+        this.applyMatches(scene, visual.matchedRows);
+        this.revealAllPieces(scene, example);
+        note.textContent = `${visual.matchedRows.length} rows remain TRUE. Everything else fades out.`;
+        return instant ? 0 : 600;
+      }),
+      this.step(`Spill result array`, (instant) => {
+        scene.querySelector(`[data-spill-preview]`)?.classList.add(`is-spilled`);
+        note.textContent = `FILTER spills the surviving rows into a new dynamic array.`;
+        return instant ? 0 : 820;
+      }),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealResult(scene, `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} spilled`);
+        return instant ? 0 : 650;
+      })
+    ];
+  }
+
+  genericSteps(scene, example) {
+    return [
+      this.step(`Assemble formula`, (instant) => {
+        this.revealAllPieces(scene, example);
+        return instant ? 0 : 500;
+      }),
+      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
+        this.revealResult(scene, example.resultDisplay);
+        return instant ? 0 : 650;
+      })
+    ];
+  }
+
+  buildBasicResultScene() {
     const example = this.formula.basic;
-    this.setCaption(`${this.formula.displayName} Basic Mode is complete. Lock the pattern before adding complexity.`);
-    this.mount(`
-      <div class="outro-lockup result-lockup">
+    this.setMode(`basic`);
+    this.setCaption(`Basic Mode is complete. You decide when to lock the pattern and when to move on.`);
+    const scene = this.mount(`
+      <div class="outro-lockup result-lockup manual-result-lockup">
         <div class="scene__kicker">Basic pattern locked</div>
         <div class="outro-title result-lockup__value">${this.escape(example.resultDisplay)}</div>
         <div class="outro-copy">${this.escape(example.summary)}</div>
       </div>
     `, `outro-scene basic-result-scene`);
-    return 2400;
+    return {
+      scene,
+      steps: [
+        this.step(`Lock basic result`, (instant) => {
+          scene.classList.add(`result-value-ready`);
+          return instant ? 0 : 700;
+        }),
+        this.step(`Reveal takeaway`, (instant) => {
+          scene.classList.add(`result-copy-ready`);
+          return instant ? 0 : 560;
+        })
+      ]
+    };
   }
 
-  sceneHardTransition() {
+  buildHardTransitionScene() {
     const hard = this.formula.hard;
-    this.setCaption(`The switch happens automatically. Hard Mode adds logic without changing the visual language.`);
+    this.setMode(`basic`);
+    this.setCaption(`Hard Mode waits for you. The switch will not move until you trigger it.`);
     const scene = this.mount(`
       <div class="mode-energy" aria-hidden="true"></div>
       <div class="mode-transition">
-        <div class="auto-toggle" aria-label="Automatically switching from Basic Mode to Hard Mode">
+        <div class="auto-toggle" aria-label="Switch from Basic Mode to Hard Mode">
           <span class="auto-toggle__thumb" aria-hidden="true"></span>
-          <span>BASIC</span>
-          <span>HARD</span>
+          <span>BASIC</span><span>HARD</span>
         </div>
         <div class="mode-transition__title">${this.escape(hard.transitionTitle ?? `One more layer.`)}</div>
         <div class="mode-transition__copy">${this.escape(hard.transitionCopy ?? hard.task)}</div>
       </div>
     `, `mode-scene`);
-
-    this.later(() => scene.classList.add(`is-charged`), 400);
-    this.later(() => scene.querySelector(`.auto-toggle`)?.classList.add(`is-hard`), 900);
-    this.later(() => this.setMode(`hard`), 1320);
-    return 2900;
+    return {
+      scene,
+      steps: [
+        this.step(`Charge Hard Mode`, (instant) => {
+          scene.classList.add(`is-charged`, `mode-copy-ready`);
+          return instant ? 0 : 720;
+        }),
+        this.step(`Switch to Hard Mode`, (instant) => {
+          scene.querySelector(`.auto-toggle`)?.classList.add(`is-hard`);
+          this.setMode(`hard`);
+          return instant ? 0 : 900;
+        })
+      ]
+    };
   }
 
-  sceneOutro() {
+  buildOutroScene() {
     this.setMode(`hard`);
     const basic = this.formula.basic;
     const hard = this.formula.hard;
-    this.setCaption(`Replay this formula or move directly to the next module.`);
-    this.mount(`
-      <div class="outro-lockup">
+    this.setCaption(`Formula complete. Restart it or move to another formula whenever you choose.`);
+    const scene = this.mount(`
+      <div class="outro-lockup manual-outro-lockup">
         <div class="outro-check">✓</div>
         <div class="scene__kicker">${this.escape(this.formula.displayName)} complete</div>
         <h2 class="outro-title">${this.escape(this.formula.identity.outroTitle)}</h2>
         <p class="outro-copy">Basic: <strong>${this.escape(basic.resultDisplay)}</strong> · Hard: <strong>${this.escape(hard.resultDisplay)}</strong>. ${this.escape(hard.summary)}</p>
       </div>
     `, `outro-scene`);
-    return 5200;
-  }
-
-  animateWorkedExample(scene, example) {
-    switch (example.visual.type) {
-      case `aggregate`:
-        return this.animateAggregate(scene, example);
-      case `count`:
-        return this.animateCount(scene, example);
-      case `lookup`:
-        return this.animateLookup(scene, example);
-      case `logic`:
-        return this.animateLogic(scene, example);
-      case `threshold`:
-        return this.animateThreshold(scene, example);
-      case `filter`:
-        return this.animateFilter(scene, example);
-      default:
-        return this.animateGeneric(scene, example);
-    }
-  }
-
-  animateAggregate(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-    const sumIndex = this.columnIndex(visual.sum.column);
-
-    this.later(() => {
-      this.highlightColumn(scene, visual.sum.column);
-      note.textContent = `sum_range → ${visual.sum.range}. These are the values Excel is allowed to add.`;
-      this.revealPieces(scene, [0, 1]);
-    }, 800);
-
-    visual.criteria.forEach((criterion, index) => {
-      this.later(() => {
-        this.clearTableState(scene);
-        this.highlightColumn(scene, criterion.column);
-        this.activateChip(scene, index);
-        note.textContent = `${index === 0 ? `criteria_range1` : `criteria_range${index + 1}`} → ${criterion.range}. Match “${criterion.value}”.`;
-        this.revealProgress(scene, example, index + 1, visual.criteria.length + 2);
-      }, 1800 + index * 1050);
-    });
-
-    const matchAt = 1950 + visual.criteria.length * 1050;
-    this.later(() => {
-      this.clearTableState(scene);
-      this.applyMatches(scene, visual.matchedRows, sumIndex);
-      note.textContent = visual.criteria.length > 1 ? `Only rows satisfying ALL conditions remain active.` : `Only matching rows remain active.`;
-      this.revealAllPieces(scene, example);
-      this.setEquation(scene, visual.matchedValues.join(` + `));
-    }, matchAt);
-
-    this.later(() => {
-      note.textContent = `Now combine only the highlighted values.`;
-      this.flyMatchedValues(scene, visual.matchedRows, sumIndex);
-    }, matchAt + 950);
-
-    this.later(() => this.revealResult(scene, `${visual.matchedValues.join(` + `)} = ${example.resultDisplay}`), matchAt + 1850);
-    return matchAt + 3000;
-  }
-
-  animateCount(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-
-    visual.criteria.forEach((criterion, index) => {
-      this.later(() => {
-        this.clearTableState(scene);
-        this.highlightColumn(scene, criterion.column);
-        this.activateChip(scene, index);
-        note.textContent = `${criterion.range} tests ${this.columnLabel(criterion.column)} for “${criterion.value}”.`;
-        this.revealProgress(scene, example, index + 1, visual.criteria.length + 1);
-      }, 850 + index * 1150);
-    });
-
-    const matchAt = 1100 + visual.criteria.length * 1150;
-    this.later(() => {
-      this.clearTableState(scene);
-      this.applyMatches(scene, visual.matchedRows);
-      this.revealAllPieces(scene, example);
-      note.textContent = `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} survived the test${visual.criteria.length > 1 ? `s` : ``}.`;
-    }, matchAt);
-
-    this.later(() => {
-      this.flyRowsToResult(scene, visual.matchedRows);
-      this.animateCounter(scene, visual.matchedRows.length);
-      note.textContent = `Each surviving row contributes exactly +1.`;
-    }, matchAt + 900);
-
-    this.later(() => this.revealResult(scene, `COUNT = ${example.resultDisplay}`), matchAt + 1850);
-    return matchAt + 3000;
-  }
-
-  animateLookup(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-    const returnIndex = this.columnIndex(visual.returnColumn);
-
-    this.later(() => {
-      this.highlightColumn(scene, visual.lookupColumn);
-      this.activateChip(scene, 0);
-      this.revealPieces(scene, [0, 1, 2, 3]);
-      note.textContent = `lookup_array → ${visual.lookupRange}. Scan for “${visual.lookupValue}”.`;
-      this.scanColumn(scene, visual.lookupColumn, visual.matchedRow);
-    }, 700);
-
-    this.later(() => {
-      this.clearTableState(scene);
-      this.focusRow(scene, visual.matchedRow);
-      scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
-      note.textContent = `Match locked on row ${visual.matchedRow + 2}. Keep the row alignment.`;
-      this.setLookupTrack(scene, `MATCH`, visual.lookupValue);
-    }, 2400);
-
-    this.later(() => {
-      this.clearTableState(scene);
-      this.focusRow(scene, visual.matchedRow);
-      this.highlightColumn(scene, visual.returnColumn);
-      scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.returnColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
-      this.activateChip(scene, 1);
-      note.textContent = `return_array → ${visual.returnRange}. Retrieve the value from the same row.`;
-      this.revealProgress(scene, example, 2, 3);
-      this.setLookupTrack(scene, `RETURN`, this.cellDisplay(this.formula.dataset.rows[visual.matchedRow][visual.returnColumn], this.formula.dataset.columns[returnIndex]));
-    }, 3450);
-
-    if (visual.fallback || visual.exact) {
-      this.later(() => {
-        this.revealAllPieces(scene, example);
-        note.textContent = `${visual.fallback ? `Fallback = “${visual.fallback}”. ` : ``}${visual.exact ? `Match mode 0 forces an exact match.` : ``}`;
-      }, 4450);
-    }
-
-    this.later(() => {
-      this.flyCellToResult(scene, visual.matchedRow, returnIndex);
-      this.revealAllPieces(scene, example);
-    }, 5000);
-
-    this.later(() => this.revealResult(scene, `Retrieved → ${example.resultDisplay}`), 5850);
-    return 7000;
-  }
-
-  animateLogic(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-
-    this.later(() => {
-      this.focusRow(scene, visual.targetRow);
-      this.revealPieces(scene, [0]);
-      note.textContent = `Evaluate only the highlighted record. Each check feeds the decision gate.`;
-    }, 750);
-
-    visual.checks.forEach((check, index) => {
-      this.later(() => {
-        this.clearTableState(scene);
-        this.focusRow(scene, visual.targetRow);
-        check.columns.forEach((column) => this.highlightCell(scene, visual.targetRow, column));
-        const chip = scene.querySelector(`[data-decision-check="${index}"]`);
-        chip?.classList.add(check.passed ? `is-pass` : `is-fail`);
-        note.textContent = `${check.label} → ${check.passed ? `TRUE` : `FALSE`}`;
-        this.revealProgress(scene, example, index + 1, visual.checks.length + 1);
-      }, 1450 + index * 850);
-    });
-
-    const branchAt = 1750 + visual.checks.length * 850;
-    this.later(() => {
-      this.revealAllPieces(scene, example);
-      const gate = scene.querySelector(`[data-decision-gate]`);
-      gate?.classList.add(visual.branch === `true` ? `choose-true` : `choose-false`);
-      note.textContent = `The logical test resolves to ${visual.branch.toUpperCase()}. Follow that branch.`;
-    }, branchAt);
-
-    this.later(() => this.revealResult(scene, `${visual.branch.toUpperCase()} → ${example.resultDisplay}`), branchAt + 1150);
-    return branchAt + 2450;
-  }
-
-  animateThreshold(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-
-    this.later(() => {
-      this.focusRow(scene, visual.targetRow);
-      this.highlightCell(scene, visual.targetRow, visual.valueColumn);
-      this.revealPieces(scene, [0]);
-      note.textContent = `Start with ${visual.valueDisplay}. IFS tests thresholds from left to right.`;
-      scene.querySelector(`[data-threshold-value]`)?.classList.add(`is-live`);
-    }, 750);
-
-    visual.bands.forEach((band, index) => {
-      this.later(() => {
-        const node = scene.querySelector(`[data-band="${index}"]`);
-        const selected = index === visual.selectedIndex;
-        node?.classList.add(selected ? `is-selected` : index < visual.selectedIndex ? `is-failed` : `is-waiting`);
-        note.textContent = selected
-          ? `${visual.valueDisplay} satisfies ${band.test}. Stop here → ${band.label}.`
-          : `${band.test} → FALSE. Move to the next test.`;
-        this.revealProgress(scene, example, index + 1, visual.bands.length);
-      }, 1500 + index * 720);
-    });
-
-    const resultAt = 1750 + visual.selectedIndex * 720 + 1100;
-    this.later(() => {
-      this.revealAllPieces(scene, example);
-      this.revealResult(scene, `First TRUE → ${example.resultDisplay}`);
-    }, resultAt);
-    return Math.max(resultAt + 1900, 5600);
-  }
-
-  animateFilter(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-
-    this.later(() => {
-      scene.querySelectorAll(`tbody tr`).forEach((row) => row.classList.add(`filter-ready`));
-      this.revealPieces(scene, [0, 1]);
-      note.textContent = `array → ${this.formula.dataset.range.replace(`1`, `2`)}. This is the table FILTER may return.`;
-    }, 700);
-
-    visual.criteria.forEach((criterion, index) => {
-      this.later(() => {
-        this.clearTableState(scene);
-        this.highlightColumn(scene, criterion.column);
-        this.activateChip(scene, index);
-        note.textContent = `include test ${index + 1}: ${this.columnLabel(criterion.column)} = “${criterion.value}”.`;
-        this.revealProgress(scene, example, index + 1, visual.criteria.length + 2);
-      }, 1500 + index * 950);
-    });
-
-    const filterAt = 1700 + visual.criteria.length * 950;
-    this.later(() => {
-      this.clearTableState(scene);
-      this.applyMatches(scene, visual.matchedRows);
-      this.revealAllPieces(scene, example);
-      note.textContent = `${visual.matchedRows.length} rows remain TRUE. Everything else fades out.`;
-    }, filterAt);
-
-    this.later(() => {
-      scene.querySelector(`[data-spill-preview]`)?.classList.add(`is-spilled`);
-      note.textContent = `FILTER spills the surviving rows into a new dynamic array.`;
-    }, filterAt + 1050);
-
-    this.later(() => this.revealResult(scene, `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} spilled`), filterAt + 1900);
-    return filterAt + 3100;
-  }
-
-  animateGeneric(scene, example) {
-    this.later(() => this.revealAllPieces(scene, example), 1000);
-    this.later(() => this.revealResult(scene, example.resultDisplay), 2500);
-    return 4200;
+    return {
+      scene,
+      steps: [
+        this.step(`Complete ${this.formula.displayName}`, (instant) => {
+          scene.classList.add(`outro-mark-ready`, `outro-title-ready`);
+          return instant ? 0 : 700;
+        }),
+        this.step(`Reveal final summary`, (instant) => {
+          scene.classList.add(`outro-copy-ready`);
+          return instant ? 0 : 560;
+        })
+      ]
+    };
   }
 
   renderLogicLine(example) {
@@ -757,6 +953,7 @@ export class FormulaMotionEngine {
   animateCounter(scene, target) {
     const counter = scene.querySelector(`[data-count-value]`);
     if (!counter) return;
+    scene.querySelector(`[data-count-orbit]`)?.classList.add(`is-counting`);
     for (let value = 1; value <= target; value += 1) {
       this.later(() => {
         counter.textContent = String(value);

@@ -246,13 +246,11 @@ export class FormulaMotionEngine {
     }
 
     if (index === 1) {
-      // One click per argument card. No micro-clicks for punctuation or decoration.
-      plan.actions = all.map((stepIndex, argumentIndex) => ({
-        label: `Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${this.formula.arguments?.[argumentIndex]?.name ?? `Explain`}`,
-        indices: [stepIndex],
-        pace: 0.68
-      }));
-      plan.autoAdvanceAfterActions = true;
+      // The user has already revealed every syntax argument in the intro.
+      // Anatomy is therefore a short automatic recap, not a second round of identical clicks.
+      plan.autoSteps = all;
+      plan.autoAdvance = true;
+      plan.autoPace = 0.48;
       return plan;
     }
 
@@ -265,10 +263,15 @@ export class FormulaMotionEngine {
     }
 
     if (index === 3 || index === 6) {
-      // Task + live table arrive with the scene. User controls the meaningful formula beats.
+      // Task + live table arrive automatically. Every top-level formula argument is one deliberate beat.
+      // The final solve/reveal is one additional meaningful beat.
       plan.autoSteps = all.slice(0, 2);
       plan.autoPace = 0.68;
-      plan.actions = this.groupWorkedActions(all.slice(2), index === 3 ? this.formula.basic : this.formula.hard);
+      plan.actions = all.slice(2).map((stepIndex) => ({
+        label: steps[stepIndex]?.label ?? `Continue`,
+        indices: [stepIndex],
+        pace: 0.72
+      }));
       plan.autoAdvanceAfterActions = index === 3;
       return plan;
     }
@@ -294,58 +297,6 @@ export class FormulaMotionEngine {
 
     plan.actions = all.length ? [{ label: `Continue`, indices: all }] : [];
     return plan;
-  }
-
-  groupWorkedActions(indices, example) {
-    const count = example.visual.criteria?.length ?? 0;
-    const type = example.visual.type;
-    const action = (label, values, pace = 0.62) => ({ label, indices: values.filter((value) => Number.isInteger(value)), pace });
-
-    if (type === `aggregate`) {
-      return [
-        action(`Map ranges + criteria`, indices.slice(0, 1 + count), 0.62),
-        action(`Lock matching rows`, [indices[1 + count]], 0.68),
-        action(`Combine + reveal result`, indices.slice(2 + count), 0.66)
-      ];
-    }
-
-    if (type === `count`) {
-      return [
-        action(`Apply all conditions`, indices.slice(0, count), 0.62),
-        action(`Count matches + reveal`, indices.slice(count), 0.64)
-      ];
-    }
-
-    if (type === `lookup`) {
-      return [
-        action(`Search + lock match`, indices.slice(0, 2), 0.64),
-        action(`Retrieve + reveal result`, indices.slice(2), 0.62)
-      ];
-    }
-
-    if (type === `logic`) {
-      const checks = example.visual.checks?.length ?? 0;
-      return [
-        action(`Evaluate the decision`, indices.slice(0, 1 + checks), 0.62),
-        action(`Choose branch + reveal`, indices.slice(1 + checks), 0.66)
-      ];
-    }
-
-    if (type === `threshold`) {
-      return [
-        action(`Run the IFS cascade`, indices.slice(0, -1), 0.62),
-        action(`Reveal first TRUE`, indices.slice(-1), 0.68)
-      ];
-    }
-
-    if (type === `filter`) {
-      return [
-        action(`Define + test the filter`, indices.slice(0, 1 + count), 0.60),
-        action(`Keep + spill + reveal`, indices.slice(1 + count), 0.62)
-      ];
-    }
-
-    return [action(`Build + reveal`, indices, 0.64)];
   }
 
   wait(ms) {
@@ -469,7 +420,7 @@ export class FormulaMotionEngine {
   buildAnatomyScene() {
     const f = this.formula;
     this.setMode(`basic`);
-    this.setCaption(`One argument per click. Clear, deliberate, and fast enough to stay engaging.`);
+    this.setCaption(`Quick anatomy recap. You already controlled every argument in the syntax reveal; this scene flows automatically.`);
     const title = this.escape(f.identity.anatomyTitle).replaceAll(`\n`, `<br>`);
     const scene = this.mount(`
       <div class="anatomy-layout">
@@ -557,7 +508,7 @@ export class FormulaMotionEngine {
           <div class="formula-build">
             <div class="formula-build__label">Formula assembly</div>
             <div class="formula-code" aria-label="Formula being assembled">
-              ${example.pieces.map((piece, index) => `<span class="formula-piece ${piece.accent ? `is-accent` : ``}" data-piece="${index}">${this.escape(piece.text)}</span>`).join(``)}
+              ${this.renderFormulaAssembly(example)}
             </div>
             <div class="step-note" data-step-note>Waiting for your next motion…</div>
           </div>
@@ -588,264 +539,293 @@ export class FormulaMotionEngine {
   }
 
   workedSteps(scene, example) {
-    switch (example.visual.type) {
-      case `aggregate`: return this.aggregateSteps(scene, example);
-      case `count`: return this.countSteps(scene, example);
-      case `lookup`: return this.lookupSteps(scene, example);
-      case `logic`: return this.logicSteps(scene, example);
-      case `threshold`: return this.thresholdSteps(scene, example);
-      case `filter`: return this.filterSteps(scene, example);
-      default: return this.genericSteps(scene, example);
-    }
+    const handlers = {
+      aggregate: () => this.aggregateArgumentSteps(scene, example),
+      count: () => this.countArgumentSteps(scene, example),
+      lookup: () => this.lookupArgumentSteps(scene, example),
+      logic: () => this.logicArgumentSteps(scene, example),
+      threshold: () => this.thresholdArgumentSteps(scene, example),
+      filter: () => this.filterArgumentSteps(scene, example)
+    };
+    return (handlers[example.visual.type] ?? (() => this.genericArgumentSteps(scene, example)))();
   }
 
-  aggregateSteps(scene, example) {
+  aggregateArgumentSteps(scene, example) {
     const { visual } = example;
     const note = scene.querySelector(`[data-step-note]`);
+    const args = this.parseFormulaArguments(example.formula).args;
     const sumIndex = this.columnIndex(visual.sum.column);
-    return [
-      this.step(`Select sum_range`, (instant) => {
-        this.clearTableState(scene);
-        this.highlightColumn(scene, visual.sum.column);
-        note.textContent = `sum_range → ${visual.sum.range}. These are the values Excel is allowed to add.`;
-        this.revealPieces(scene, [0, 1]);
-        return instant ? 0 : 520;
-      }),
-      ...visual.criteria.map((criterion, index) => this.step(`Apply criterion ${index + 1}`, (instant) => {
+    const steps = [];
+
+    args.forEach((argument, argumentIndex) => {
+      if (argumentIndex === 0) {
+        steps.push(this.step(`Argument 01 · sum_range`, (instant) => {
+          this.clearTableState(scene);
+          this.highlightColumn(scene, visual.sum.column);
+          this.revealFormulaArgument(scene, argumentIndex);
+          note.textContent = `sum_range → ${visual.sum.range}. Excel may add only this column.`;
+          return instant ? 0 : 620;
+        }));
+        return;
+      }
+
+      const criterionIndex = Math.floor((argumentIndex - 1) / 2);
+      const criterion = visual.criteria[criterionIndex];
+      if (!criterion) return;
+      const isRange = argumentIndex % 2 === 1;
+      steps.push(this.step(`Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${isRange ? `criteria_range${criterionIndex + 1}` : `criteria${criterionIndex + 1}`}`, (instant) => {
         this.clearTableState(scene);
         this.highlightColumn(scene, criterion.column);
-        this.activateChip(scene, index);
-        note.textContent = `criteria_range${index + 1} → ${criterion.range}. Match “${criterion.value}”.`;
-        this.revealProgress(scene, example, index + 1, visual.criteria.length + 2);
-        return instant ? 0 : 520;
-      })),
-      this.step(`Lock matching rows`, (instant) => {
-        this.clearTableState(scene);
-        this.applyMatches(scene, visual.matchedRows, sumIndex);
-        this.revealAllPieces(scene, example);
-        this.setEquation(scene, visual.matchedValues.join(` + `));
-        note.textContent = visual.criteria.length > 1 ? `Only rows satisfying ALL conditions remain active.` : `Only matching rows remain active.`;
-        return instant ? 0 : 600;
-      }),
-      this.step(`Combine matched values`, (instant) => {
-        note.textContent = `Now combine only the highlighted Sales values.`;
-        if (!instant) this.flyMatchedValues(scene, visual.matchedRows, sumIndex);
-        return instant ? 0 : 900;
-      }),
-      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
-        this.revealResult(scene, `${visual.matchedValues.join(` + `)} = ${example.resultDisplay}`);
-        return instant ? 0 : 700;
-      })
-    ];
-  }
-
-  countSteps(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-    return [
-      ...visual.criteria.map((criterion, index) => this.step(`Test ${this.columnLabel(criterion.column)}`, (instant) => {
-        this.clearTableState(scene);
-        this.highlightColumn(scene, criterion.column);
-        this.activateChip(scene, index);
-        note.textContent = `${criterion.range} tests ${this.columnLabel(criterion.column)} for “${criterion.value}”.`;
-        this.revealProgress(scene, example, index + 1, visual.criteria.length + 1);
-        return instant ? 0 : 520;
-      })),
-      this.step(`Lock matching rows`, (instant) => {
-        this.clearTableState(scene);
-        this.applyMatches(scene, visual.matchedRows);
-        this.revealAllPieces(scene, example);
-        note.textContent = `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} survived the tests.`;
-        return instant ? 0 : 560;
-      }),
-      this.step(`Count survivors`, (instant) => {
-        note.textContent = `Each surviving row contributes exactly +1.`;
-        if (instant) {
-          const counter = scene.querySelector(`[data-count-value]`);
-          if (counter) counter.textContent = String(visual.matchedRows.length);
-        } else {
-          this.flyRowsToResult(scene, visual.matchedRows);
-          this.animateCounter(scene, visual.matchedRows.length);
+        if (!isRange) {
+          this.highlightCriterionMatches(scene, criterion);
+          this.activateChip(scene, criterionIndex);
         }
-        return instant ? 0 : 900;
-      }),
-      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
-        this.revealResult(scene, `COUNT = ${example.resultDisplay}`);
-        return instant ? 0 : 650;
-      })
-    ];
-  }
-
-  lookupSteps(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-    const returnIndex = this.columnIndex(visual.returnColumn);
-    const steps = [
-      this.step(`Scan lookup_array`, (instant) => {
-        this.highlightColumn(scene, visual.lookupColumn);
-        this.activateChip(scene, 0);
-        this.revealPieces(scene, [0, 1, 2, 3]);
-        note.textContent = `lookup_array → ${visual.lookupRange}. Scan for “${visual.lookupValue}”.`;
-        if (instant) {
-          scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-scan`);
-        } else {
-          this.scanColumn(scene, visual.lookupColumn, visual.matchedRow);
-        }
-        return instant ? 0 : 1000;
-      }),
-      this.step(`Lock the match`, (instant) => {
-        this.clearTableState(scene);
-        this.focusRow(scene, visual.matchedRow);
-        scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
-        this.setLookupTrack(scene, `MATCH`, visual.lookupValue);
-        note.textContent = `Match locked on row ${visual.matchedRow + 2}. Keep the row alignment.`;
-        return instant ? 0 : 560;
-      }),
-      this.step(`Retrieve ${this.columnLabel(visual.returnColumn)}`, (instant) => {
-        this.clearTableState(scene);
-        this.focusRow(scene, visual.matchedRow);
-        this.highlightColumn(scene, visual.returnColumn);
-        scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.returnColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
-        this.activateChip(scene, 1);
-        this.revealProgress(scene, example, 2, 3);
-        this.setLookupTrack(scene, `RETURN`, this.cellDisplay(this.formula.dataset.rows[visual.matchedRow][visual.returnColumn], this.formula.dataset.columns[returnIndex]));
-        note.textContent = `return_array → ${visual.returnRange}. Retrieve the value from the same row.`;
-        return instant ? 0 : 600;
-      })
-    ];
-
-    if (visual.fallback || visual.exact) {
-      steps.push(this.step(`Apply lookup options`, (instant) => {
-        this.revealAllPieces(scene, example);
-        note.textContent = `${visual.fallback ? `Fallback = “${visual.fallback}”. ` : ``}${visual.exact ? `Match mode 0 forces an exact match.` : ``}`;
-        return instant ? 0 : 480;
+        this.revealFormulaArgument(scene, argumentIndex);
+        note.textContent = isRange
+          ? `criteria_range${criterionIndex + 1} → ${criterion.range}. Excel checks this column.`
+          : `criteria${criterionIndex + 1} → “${criterion.value}”. Matching cells light up.`;
+        return instant ? 0 : 620;
       }));
-    }
+    });
 
-    steps.push(
-      this.step(`Send value to result`, (instant) => {
-        this.revealAllPieces(scene, example);
-        if (!instant) this.flyCellToResult(scene, visual.matchedRow, returnIndex);
-        return instant ? 0 : 900;
-      }),
-      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
-        this.revealResult(scene, `Retrieved → ${example.resultDisplay}`);
-        return instant ? 0 : 650;
-      })
-    );
+    steps.push(this.step(`Resolve matches · reveal ${example.resultDisplay}`, (instant) => {
+      this.clearTableState(scene);
+      visual.criteria.forEach((_, index) => this.activateChip(scene, index));
+      this.applyMatches(scene, visual.matchedRows, sumIndex);
+      this.setEquation(scene, visual.matchedValues.join(` + `));
+      note.textContent = visual.criteria.length > 1
+        ? `All conditions are now locked. Combine only the surviving Sales values.`
+        : `The matching rows are locked. Combine only their Sales values.`;
+      if (instant) {
+        this.revealResult(scene, `${visual.matchedValues.join(` + `)} = ${example.resultDisplay}`);
+      } else {
+        this.flyMatchedValues(scene, visual.matchedRows, sumIndex);
+        this.later(() => this.revealResult(scene, `${visual.matchedValues.join(` + `)} = ${example.resultDisplay}`), 620);
+      }
+      return instant ? 0 : 1180;
+    }));
     return steps;
   }
 
-  logicSteps(scene, example) {
+  countArgumentSteps(scene, example) {
     const { visual } = example;
     const note = scene.querySelector(`[data-step-note]`);
-    return [
-      this.step(`Focus target record`, (instant) => {
-        this.focusRow(scene, visual.targetRow);
-        this.revealPieces(scene, [0]);
-        note.textContent = `Evaluate only the highlighted record. Each check feeds the decision gate.`;
-        return instant ? 0 : 520;
-      }),
-      ...visual.checks.map((check, index) => this.step(`Evaluate check ${index + 1}`, (instant) => {
-        this.clearTableState(scene);
-        this.focusRow(scene, visual.targetRow);
-        check.columns.forEach((column) => this.highlightCell(scene, visual.targetRow, column));
-        scene.querySelector(`[data-decision-check="${index}"]`)?.classList.add(check.passed ? `is-pass` : `is-fail`);
-        note.textContent = `${check.label} → ${check.passed ? `TRUE` : `FALSE`}`;
-        this.revealProgress(scene, example, index + 1, visual.checks.length + 1);
-        return instant ? 0 : 520;
-      })),
-      this.step(`Choose ${visual.branch.toUpperCase()} branch`, (instant) => {
-        this.revealAllPieces(scene, example);
-        scene.querySelector(`[data-decision-gate]`)?.classList.add(visual.branch === `true` ? `choose-true` : `choose-false`);
-        note.textContent = `The logical test resolves to ${visual.branch.toUpperCase()}. Follow that branch.`;
-        return instant ? 0 : 650;
-      }),
-      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
-        this.revealResult(scene, `${visual.branch.toUpperCase()} → ${example.resultDisplay}`);
-        return instant ? 0 : 650;
-      })
-    ];
-  }
+    const args = this.parseFormulaArguments(example.formula).args;
+    const steps = [];
 
-  thresholdSteps(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-    return [
-      this.step(`Read input ${visual.valueDisplay}`, (instant) => {
-        this.focusRow(scene, visual.targetRow);
-        this.highlightCell(scene, visual.targetRow, visual.valueColumn);
-        this.revealPieces(scene, [0]);
-        scene.querySelector(`[data-threshold-value]`)?.classList.add(`is-live`);
-        note.textContent = `Start with ${visual.valueDisplay}. IFS tests thresholds from left to right.`;
-        return instant ? 0 : 520;
-      }),
-      ...visual.bands.slice(0, visual.selectedIndex + 1).map((band, index) => this.step(`Test ${band.test}`, (instant) => {
-        const selected = index === visual.selectedIndex;
-        scene.querySelector(`[data-band="${index}"]`)?.classList.add(selected ? `is-selected` : `is-failed`);
-        for (let laterIndex = index + 1; laterIndex < visual.bands.length; laterIndex += 1) {
-          scene.querySelector(`[data-band="${laterIndex}"]`)?.classList.add(`is-waiting`);
-        }
-        note.textContent = selected
-          ? `${visual.valueDisplay} satisfies ${band.test}. Stop here → ${band.label}.`
-          : `${band.test} → FALSE. Move to the next test.`;
-        this.revealProgress(scene, example, index + 1, visual.bands.length);
-        return instant ? 0 : 540;
-      })),
-      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
-        this.revealAllPieces(scene, example);
-        this.revealResult(scene, `First TRUE → ${example.resultDisplay}`);
-        return instant ? 0 : 650;
-      })
-    ];
-  }
-
-  filterSteps(scene, example) {
-    const { visual } = example;
-    const note = scene.querySelector(`[data-step-note]`);
-    return [
-      this.step(`Define FILTER array`, (instant) => {
-        scene.querySelectorAll(`tbody tr`).forEach((row) => row.classList.add(`filter-ready`));
-        this.revealPieces(scene, [0, 1]);
-        note.textContent = `array → ${this.formula.dataset.range.replace(`1`, `2`)}. This is the table FILTER may return.`;
-        return instant ? 0 : 520;
-      }),
-      ...visual.criteria.map((criterion, index) => this.step(`Apply include test ${index + 1}`, (instant) => {
+    args.forEach((argument, argumentIndex) => {
+      const criterionIndex = Math.floor(argumentIndex / 2);
+      const criterion = visual.criteria[criterionIndex];
+      if (!criterion) return;
+      const isRange = argumentIndex % 2 === 0;
+      steps.push(this.step(`Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${isRange ? `criteria_range${criterionIndex + 1}` : `criteria${criterionIndex + 1}`}`, (instant) => {
         this.clearTableState(scene);
         this.highlightColumn(scene, criterion.column);
-        this.activateChip(scene, index);
-        note.textContent = `include test ${index + 1}: ${this.columnLabel(criterion.column)} = “${criterion.value}”.`;
-        this.revealProgress(scene, example, index + 1, visual.criteria.length + 2);
-        return instant ? 0 : 520;
-      })),
-      this.step(`Keep TRUE rows`, (instant) => {
-        this.clearTableState(scene);
-        this.applyMatches(scene, visual.matchedRows);
-        this.revealAllPieces(scene, example);
-        note.textContent = `${visual.matchedRows.length} rows remain TRUE. Everything else fades out.`;
-        return instant ? 0 : 600;
-      }),
-      this.step(`Spill result array`, (instant) => {
-        scene.querySelector(`[data-spill-preview]`)?.classList.add(`is-spilled`);
-        note.textContent = `FILTER spills the surviving rows into a new dynamic array.`;
-        return instant ? 0 : 820;
-      }),
-      this.step(`Reveal ${example.resultDisplay}`, (instant) => {
-        this.revealResult(scene, `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} spilled`);
-        return instant ? 0 : 650;
-      })
-    ];
+        if (!isRange) {
+          this.highlightCriterionMatches(scene, criterion);
+          this.activateChip(scene, criterionIndex);
+        }
+        this.revealFormulaArgument(scene, argumentIndex);
+        note.textContent = isRange
+          ? `${criterion.range} is the range Excel will test.`
+          : `Criterion = “${criterion.value}”. Matching cells stay active.`;
+        return instant ? 0 : 620;
+      }));
+    });
+
+    steps.push(this.step(`Count matches · reveal ${example.resultDisplay}`, (instant) => {
+      this.clearTableState(scene);
+      this.applyMatches(scene, visual.matchedRows);
+      note.textContent = `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} satisfy every condition.`;
+      if (instant) {
+        const counter = scene.querySelector(`[data-count-value]`);
+        if (counter) counter.textContent = String(visual.matchedRows.length);
+        this.revealResult(scene, `COUNT = ${example.resultDisplay}`);
+      } else {
+        this.flyRowsToResult(scene, visual.matchedRows);
+        this.animateCounter(scene, visual.matchedRows.length);
+        this.later(() => this.revealResult(scene, `COUNT = ${example.resultDisplay}`), 620);
+      }
+      return instant ? 0 : 1120;
+    }));
+    return steps;
   }
 
-  genericSteps(scene, example) {
+  lookupArgumentSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    const args = this.parseFormulaArguments(example.formula).args;
+    const returnIndex = this.columnIndex(visual.returnColumn);
+    const labels = [`lookup_value`, `lookup_array`, `return_array`, `[if_not_found]`, `[match_mode]`, `[search_mode]`];
+    const steps = args.map((argument, argumentIndex) => this.step(`Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${labels[argumentIndex] ?? `option`}`, (instant) => {
+      this.clearTableState(scene);
+      this.revealFormulaArgument(scene, argumentIndex);
+
+      if (argumentIndex === 0) {
+        this.activateChip(scene, 0);
+        scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
+        note.textContent = `lookup_value → ${visual.lookupValue}. This is the value XLOOKUP must find.`;
+      } else if (argumentIndex === 1) {
+        this.highlightColumn(scene, visual.lookupColumn);
+        if (instant) scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.lookupColumn}"]`)?.classList.add(`is-scan`);
+        else this.scanColumn(scene, visual.lookupColumn, visual.matchedRow);
+        note.textContent = `lookup_array → ${visual.lookupRange}. Search happens only in this range.`;
+      } else if (argumentIndex === 2) {
+        this.focusRow(scene, visual.matchedRow);
+        this.highlightColumn(scene, visual.returnColumn);
+        this.activateChip(scene, 1);
+        this.setLookupTrack(scene, `RETURN`, this.cellDisplay(this.formula.dataset.rows[visual.matchedRow][visual.returnColumn], this.formula.dataset.columns[returnIndex]));
+        note.textContent = `return_array → ${visual.returnRange}. Return the value aligned with the matched row.`;
+      } else if (argumentIndex === 3) {
+        note.textContent = `if_not_found → ${argument}. Use this value only when no match exists.`;
+      } else if (argumentIndex === 4) {
+        note.textContent = `match_mode → ${argument}. 0 means exact match.`;
+      } else {
+        note.textContent = `search_mode → ${argument}. This controls the search direction.`;
+      }
+      return instant ? 0 : 650;
+    }));
+
+    steps.push(this.step(`Retrieve match · reveal ${example.resultDisplay}`, (instant) => {
+      this.clearTableState(scene);
+      this.focusRow(scene, visual.matchedRow);
+      scene.querySelector(`[data-row="${visual.matchedRow}"] [data-col="${visual.returnColumn}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
+      note.textContent = `Match locked. Retrieve the value from the same row.`;
+      if (instant) this.revealResult(scene, `Retrieved → ${example.resultDisplay}`);
+      else {
+        this.flyCellToResult(scene, visual.matchedRow, returnIndex);
+        this.later(() => this.revealResult(scene, `Retrieved → ${example.resultDisplay}`), 620);
+      }
+      return instant ? 0 : 1120;
+    }));
+    return steps;
+  }
+
+  logicArgumentSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    const args = this.parseFormulaArguments(example.formula).args;
+    const labels = [`logical_test`, `value_if_true`, `value_if_false`];
+    const steps = args.map((argument, argumentIndex) => this.step(`Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${labels[argumentIndex] ?? `value`}`, (instant) => {
+      this.clearTableState(scene);
+      this.focusRow(scene, visual.targetRow);
+      this.revealFormulaArgument(scene, argumentIndex);
+
+      if (argumentIndex === 0) {
+        visual.checks.forEach((check, index) => {
+          const applyCheck = () => {
+            check.columns.forEach((column) => this.highlightCell(scene, visual.targetRow, column));
+            scene.querySelector(`[data-decision-check="${index}"]`)?.classList.add(check.passed ? `is-pass` : `is-fail`);
+          };
+          if (instant) applyCheck(); else this.later(applyCheck, index * 180);
+        });
+        note.textContent = `logical_test → ${argument}. Evaluate the complete test as one argument.`;
+      } else if (argumentIndex === 1) {
+        scene.querySelector(`.decision-branch--true`)?.classList.add(`is-preview`);
+        note.textContent = `value_if_true → ${argument}. This is returned only when the test is TRUE.`;
+      } else {
+        scene.querySelector(`.decision-branch--false`)?.classList.add(`is-preview`);
+        note.textContent = `value_if_false → ${argument}. This is returned when the test is FALSE.`;
+      }
+      return instant ? 0 : 680;
+    }));
+
+    steps.push(this.step(`Resolve branch · reveal ${example.resultDisplay}`, (instant) => {
+      scene.querySelector(`[data-decision-gate]`)?.classList.add(visual.branch === `true` ? `choose-true` : `choose-false`);
+      note.textContent = `The complete logical test is ${visual.branch.toUpperCase()}. Follow that branch.`;
+      if (instant) this.revealResult(scene, `${visual.branch.toUpperCase()} → ${example.resultDisplay}`);
+      else this.later(() => this.revealResult(scene, `${visual.branch.toUpperCase()} → ${example.resultDisplay}`), 420);
+      return instant ? 0 : 940;
+    }));
+    return steps;
+  }
+
+  thresholdArgumentSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    const args = this.parseFormulaArguments(example.formula).args;
+    const steps = args.map((argument, argumentIndex) => this.step(`Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${argumentIndex % 2 === 0 ? `logical_test${Math.floor(argumentIndex / 2) + 1}` : `value_if_true${Math.floor(argumentIndex / 2) + 1}`}`, (instant) => {
+      this.focusRow(scene, visual.targetRow);
+      this.highlightCell(scene, visual.targetRow, visual.valueColumn);
+      this.revealFormulaArgument(scene, argumentIndex);
+      scene.querySelector(`[data-threshold-value]`)?.classList.add(`is-live`);
+      const bandIndex = Math.floor(argumentIndex / 2);
+      const band = visual.bands[bandIndex];
+      if (!band) return instant ? 0 : 560;
+
+      if (argumentIndex % 2 === 0) {
+        const state = bandIndex < visual.selectedIndex ? `is-failed` : bandIndex === visual.selectedIndex ? `is-selected` : `is-waiting`;
+        scene.querySelector(`[data-band="${bandIndex}"]`)?.classList.add(state);
+        note.textContent = bandIndex > visual.selectedIndex
+          ? `${argument} is written in the formula, but IFS will never reach it after the first TRUE.`
+          : `${argument} → ${bandIndex === visual.selectedIndex ? `TRUE` : `FALSE`}.`;
+      } else {
+        note.textContent = `Return value for this test → ${argument}.`;
+      }
+      return instant ? 0 : 620;
+    }));
+
+    steps.push(this.step(`First TRUE · reveal ${example.resultDisplay}`, (instant) => {
+      note.textContent = `IFS stops at the first TRUE condition and returns ${example.resultDisplay}.`;
+      if (instant) this.revealResult(scene, `First TRUE → ${example.resultDisplay}`);
+      else this.later(() => this.revealResult(scene, `First TRUE → ${example.resultDisplay}`), 420);
+      return instant ? 0 : 940;
+    }));
+    return steps;
+  }
+
+  filterArgumentSteps(scene, example) {
+    const { visual } = example;
+    const note = scene.querySelector(`[data-step-note]`);
+    const args = this.parseFormulaArguments(example.formula).args;
+    const labels = [`array`, `include`, `[if_empty]`];
+    const steps = args.map((argument, argumentIndex) => this.step(`Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${labels[argumentIndex] ?? `option`}`, (instant) => {
+      this.clearTableState(scene);
+      this.revealFormulaArgument(scene, argumentIndex);
+
+      if (argumentIndex === 0) {
+        scene.querySelectorAll(`tbody tr`).forEach((row) => row.classList.add(`filter-ready`));
+        note.textContent = `array → ${argument}. These are the rows FILTER is allowed to return.`;
+      } else if (argumentIndex === 1) {
+        visual.criteria.forEach((criterion, index) => {
+          const applyCriterion = () => {
+            this.highlightColumn(scene, criterion.column);
+            this.highlightCriterionMatches(scene, criterion);
+            this.activateChip(scene, index);
+          };
+          if (instant) applyCriterion(); else this.later(applyCriterion, index * 220);
+        });
+        note.textContent = `include → ${argument}. Every condition inside this single argument is evaluated.`;
+      } else {
+        note.textContent = `if_empty → ${argument}. This appears only if no rows survive.`;
+      }
+      return instant ? 0 : 680;
+    }));
+
+    steps.push(this.step(`Keep TRUE rows · spill ${example.resultDisplay}`, (instant) => {
+      this.clearTableState(scene);
+      this.applyMatches(scene, visual.matchedRows);
+      scene.querySelector(`[data-spill-preview]`)?.classList.add(`is-spilled`);
+      note.textContent = `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} remain TRUE and spill into the result array.`;
+      if (instant) this.revealResult(scene, `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} spilled`);
+      else this.later(() => this.revealResult(scene, `${visual.matchedRows.length} row${visual.matchedRows.length === 1 ? `` : `s`} spilled`), 520);
+      return instant ? 0 : 1040;
+    }));
+    return steps;
+  }
+
+  genericArgumentSteps(scene, example) {
+    const note = scene.querySelector(`[data-step-note]`);
+    const args = this.parseFormulaArguments(example.formula).args;
     return [
-      this.step(`Assemble formula`, (instant) => {
-        this.revealAllPieces(scene, example);
-        return instant ? 0 : 500;
-      }),
+      ...args.map((argument, index) => this.step(`Argument ${String(index + 1).padStart(2, `0`)}`, (instant) => {
+        this.revealFormulaArgument(scene, index);
+        note.textContent = `Argument ${index + 1} → ${argument}`;
+        return instant ? 0 : 600;
+      })),
       this.step(`Reveal ${example.resultDisplay}`, (instant) => {
         this.revealResult(scene, example.resultDisplay);
-        return instant ? 0 : 650;
+        return instant ? 0 : 700;
       })
     ];
   }
@@ -1120,6 +1100,75 @@ export class FormulaMotionEngine {
     scene.querySelector(`[data-logic-chip="${index}"]`)?.classList.add(`is-active`);
   }
 
+  parseFormulaArguments(formula) {
+    const value = String(formula ?? ``).trim();
+    const open = value.indexOf(`(`);
+    const close = value.lastIndexOf(`)`);
+    if (open < 0 || close <= open) return { prefix: value, args: [], suffix: `` };
+
+    const prefix = value.slice(0, open + 1);
+    const inner = value.slice(open + 1, close);
+    const args = [];
+    let current = ``;
+    let depth = 0;
+    let inString = false;
+
+    for (let index = 0; index < inner.length; index += 1) {
+      const char = inner[index];
+      if (char === `"`) {
+        if (inString && inner[index + 1] === `"`) {
+          current += `""`;
+          index += 1;
+          continue;
+        }
+        inString = !inString;
+        current += char;
+        continue;
+      }
+      if (!inString) {
+        if (char === `(`) depth += 1;
+        else if (char === `)`) depth = Math.max(0, depth - 1);
+        else if (char === `,` && depth === 0) {
+          args.push(current.trim());
+          current = ``;
+          continue;
+        }
+      }
+      current += char;
+    }
+    if (current.trim() || inner.endsWith(`,`)) args.push(current.trim());
+    return { prefix, args, suffix: value.slice(close) };
+  }
+
+  renderFormulaAssembly(example) {
+    const parsed = this.parseFormulaArguments(example.formula);
+    return `
+      <span class="formula-prefix is-in">${this.escape(parsed.prefix)}</span>
+      ${parsed.args.map((argument, index) => `
+        <span class="formula-argument" data-formula-arg="${index}">
+          <span class="formula-argument__value">${this.escape(argument)}</span><span class="formula-separator">${index < parsed.args.length - 1 ? `, ` : parsed.suffix}</span>
+        </span>
+      `).join(``)}
+    `;
+  }
+
+  revealFormulaArgument(scene, argumentIndex) {
+    scene.querySelector(`[data-formula-arg="${argumentIndex}"]`)?.classList.add(`is-in`);
+  }
+
+  revealAllFormulaArguments(scene) {
+    scene.querySelectorAll(`[data-formula-arg]`).forEach((node) => node.classList.add(`is-in`));
+  }
+
+  highlightCriterionMatches(scene, criterion) {
+    const rows = this.formula.dataset.rows;
+    rows.forEach((row, rowIndex) => {
+      if (String(row[criterion.column]) === String(criterion.value)) {
+        scene.querySelector(`[data-row="${rowIndex}"] [data-col="${criterion.column}"]`)?.classList.add(`is-value-match`, `cell-pulse`);
+      }
+    });
+  }
+
   revealPieces(scene, indexes) {
     indexes.forEach((index) => scene.querySelector(`[data-piece="${index}"]`)?.classList.add(`is-in`));
   }
@@ -1130,7 +1179,8 @@ export class FormulaMotionEngine {
   }
 
   revealAllPieces(scene, example) {
-    this.revealPieces(scene, Array.from({ length: example.pieces.length }, (_, index) => index));
+    this.revealPieces(scene, Array.from({ length: example.pieces?.length ?? 0 }, (_, index) => index));
+    this.revealAllFormulaArguments(scene);
   }
 
   revealResult(scene, noteText = ``) {

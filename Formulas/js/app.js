@@ -421,3 +421,14 @@ dom.next.addEventListener(`click`, () => {
   if (activeIndex >= formulas.length - 1) return showToast(`This is the last formula in the current collection.`);
   loadFormula(activeIndex + 1);
 });
+
+// Lightweight diagnostics hook used only when ?qa=1 is present.
+if (new URLSearchParams(window.location.search).get(`qa`) === `1`) {
+  window.__FORMULA_MOTION_QA__ = {
+    engine,
+    formulas,
+    loadFormula,
+    get activeIndex() { return activeIndex; },
+    dom
+  };
+}

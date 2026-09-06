@@ -361,9 +361,12 @@ export class FormulaMotionEngine {
   }
 
   mount(html, extraClass = ``) {
-    const previous = this.stage.querySelector(`.scene.is-active`);
     this.stage.dataset.scene = extraClass.split(` `).find(Boolean) ?? `standard-scene`;
-    if (previous) previous.classList.add(`is-leaving`);
+
+    // Hard-remove every older scene before mounting the next one.
+    // This prevents visual overlap between heavy scenes (dataset/worked/anatomy)
+    // and makes the stage deterministic even under fast navigation.
+    this.stage.querySelectorAll(`.scene`).forEach((sceneNode) => sceneNode.remove());
 
     const wrapper = document.createElement(`section`);
     wrapper.className = `scene formula-${this.formula.id} motion-${this.formula.identity.motion} ${extraClass}`;
@@ -371,7 +374,6 @@ export class FormulaMotionEngine {
     this.stage.append(wrapper);
 
     requestAnimationFrame(() => wrapper.classList.add(`is-active`));
-    window.setTimeout(() => previous?.remove(), 680);
     return wrapper;
   }
 

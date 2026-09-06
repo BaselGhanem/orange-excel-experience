@@ -146,6 +146,7 @@
 
 .stage {
   position: relative;
+  display: block;
   min-height: 610px;
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255,255,255,.08);
@@ -181,15 +182,18 @@
 .scene {
   position: absolute;
   inset: 0;
+  z-index: 1;
   padding: clamp(28px, 4.2vw, 70px);
   display: grid;
   align-items: center;
   opacity: 0;
   transform: scale(.988) translateY(10px);
   filter: blur(6px);
-  transition: opacity 600ms var(--ease-out), transform 700ms var(--ease-out), filter 500ms ease;
+  pointer-events: none;
+  contain: layout paint;
+  transition: opacity 420ms var(--ease-out), transform 520ms var(--ease-out), filter 360ms ease;
 }
-.scene.is-active { opacity: 1; transform: none; filter: none; }
+.scene.is-active { opacity: 1; transform: none; filter: none; pointer-events: auto; }
 .scene.is-leaving { opacity: 0; transform: scale(1.012); filter: blur(7px); }
 .scene__kicker {
   color: var(--accent);
@@ -331,6 +335,14 @@
 
 /* Table / worked examples */
 .worked-layout { width: 100%; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: clamp(22px, 3vw, 42px); align-items: stretch; }
+.worked-layout,
+.anatomy-layout,
+.data-panel,
+.formula-panel,
+.sheet-wrap,
+.formula-build,
+.micro-visual,
+.result-card { min-width: 0; contain: layout paint; }
 .data-panel,
 .formula-panel {
   min-height: 470px;

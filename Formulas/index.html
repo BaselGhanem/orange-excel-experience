@@ -1,1 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#07100f" />
+  <meta name="description" content="A cinematic motion-learning platform for Excel formulas." />
+  <title>Formula Motion — Cinematic Excel Learning</title>
+  <link rel="stylesheet" href="./css/design-system.css" />
+  <link rel="stylesheet" href="./css/app.css" />
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient__orb ambient__orb--one"></div>
+    <div class="ambient__orb ambient__orb--two"></div>
+    <div class="ambient__grain"></div>
+  </div>
 
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Formula Motion home">
+      <span class="brand__mark">ƒx</span>
+      <span class="brand__copy">
+        <strong>FORMULA MOTION</strong>
+        <small>VISUAL EXCEL LAB</small>
+      </span>
+    </a>
+
+    <nav class="formula-nav" aria-label="Formula navigation">
+      <label class="formula-select" for="formulaSelect">
+        <span>Formula</span>
+        <select id="formulaSelect" aria-label="Choose formula"></select>
+      </label>
+      <div class="mode-pill" id="modeIndicator" aria-live="polite">
+        <span class="mode-pill__dot"></span>
+        <span id="modeText">BASIC MODE</span>
+      </div>
+    </nav>
+  </header>
+
+  <main class="experience" id="experience">
+    <section class="stage-shell" aria-label="Formula learning experience">
+      <div class="stage-meta">
+        <span class="stage-meta__eyebrow" id="stageEyebrow">EXCEL FORMULA · 01</span>
+        <div class="stage-progress" aria-hidden="true">
+          <span id="stageProgress"></span>
+        </div>
+        <span class="stage-meta__scene" id="sceneCounter">01 / 08</span>
+      </div>
+
+      <div class="stage" id="stage" aria-live="polite"></div>
+
+      <div class="cinema-caption" id="cinemaCaption" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="control-deck" aria-label="Playback controls">
+    <button class="control control--ghost" id="prevFormula" type="button" aria-label="Previous formula">
+      <span aria-hidden="true">←</span>
+      <span>Previous Formula</span>
+    </button>
+
+    <button class="control control--primary" id="replayFormula" type="button">
+      <span class="control__icon" aria-hidden="true">↻</span>
+      <span>Replay</span>
+    </button>
+
+    <button class="control control--ghost" id="nextFormula" type="button" aria-label="Next formula">
+      <span>Next Formula</span>
+      <span aria-hidden="true">→</span>
+    </button>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <div class="noscript">This learning experience requires JavaScript.</div>
+  </noscript>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

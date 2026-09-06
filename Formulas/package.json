@@ -1,7 +1,7 @@
 {
   "name": "formula-motion",
   "private": true,
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
-  "description": "Cinematic smart-directed motion-learning platform for Excel formulas"
+  "description": "Cinematic argument-beat motion-learning platform for Excel formulas"
 }

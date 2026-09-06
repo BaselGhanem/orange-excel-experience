@@ -15,7 +15,7 @@ Every formula contains a complete Basic Mode and Hard Mode sequence, its own dat
 
 ## Interaction model
 
-Formula Motion v4 uses a **Smart Director** model: the trainer controls the important beats, while micro-motions inside each beat choreograph themselves.
+Formula Motion v5 uses a **Smart Director** model: the trainer controls the important beats, while micro-motions inside each beat choreograph themselves.
 
 - Click anywhere inside the execution Stage to continue; the footer button is optional.
 - `ArrowRight` or `ArrowDown` launches the next meaningful beat.
@@ -88,3 +88,12 @@ Formula modules can also be opened directly with query parameters:
 - `prefers-reduced-motion` support.
 - Transform/opacity-led animations for smooth rendering.
 - No external JavaScript libraries or runtime dependencies.
+
+
+## v5 — Argument Beat Director
+- Every syntax argument requires one user action; punctuation after it reveals automatically inside the same beat.
+- Formula identity and syntax shell arrive automatically; the dataset/task are contextual transitions, not click gates.
+- Arrow keys and click-anywhere stage control remain supported.
+- Desktop showcase layout is constrained to one `100dvh` viewport with no document scroll.
+- Optional synthesized Web Audio motion cues are built in with a SOUND ON/OFF control; no external audio files are required.
+- XLOOKUP syntax anatomy now explicitly includes `search_mode` as its sixth argument.

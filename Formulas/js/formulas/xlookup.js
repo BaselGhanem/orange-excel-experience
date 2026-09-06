@@ -41,7 +41,8 @@ export const xlookupFormula = {
     { id: `lookup_array`, name: `lookup_array`, description: `The column or row Excel searches.`, color: `#86f7ff` },
     { id: `return_array`, name: `return_array`, description: `The aligned column or row that contains the answer.`, color: `#b8dcff` },
     { id: `if_not_found`, name: `[if_not_found]`, description: `Optional fallback text when the key does not exist.`, color: `#ffd36b` },
-    { id: `match_mode`, name: `[match_mode]`, description: `Optional control for exact, approximate, or wildcard matching.`, color: `#c6a7ff` }
+    { id: `match_mode`, name: `[match_mode]`, description: `Optional control for exact, approximate, or wildcard matching.`, color: `#c6a7ff` },
+    { id: `search_mode`, name: `[search_mode]`, description: `Optional control for search direction or binary-search behavior.`, color: `#9fd8ff` }
   ],
   dataset: {
     range: `A1:E7`,

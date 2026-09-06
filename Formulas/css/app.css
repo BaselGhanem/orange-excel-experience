@@ -1850,3 +1850,194 @@ body:not(.is-loading) .loader-geek__glasses { animation-play-state: paused; }
 @media (max-width: 700px) {
   .stage-director-hint { right: 16px; bottom: 12px; font-size: 7px; letter-spacing: .12em; }
 }
+
+/* =========================================================
+   v5 · Argument Beat pacing + viewport-fit desktop + sound
+   ========================================================= */
+.sound-toggle {
+  --mag-x: 0px;
+  --mag-y: 0px;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,.028);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font: 800 8px/1 var(--font-mono);
+  letter-spacing: .12em;
+  cursor: pointer;
+  transform: translate(var(--mag-x), var(--mag-y));
+  transition: transform 180ms ease, color 240ms ease, border-color 240ms ease, background 240ms ease;
+}
+.sound-toggle:hover,
+.sound-toggle[aria-pressed="true"] {
+  color: var(--accent-2);
+  border-color: rgba(var(--accent-rgb), .22);
+  background: rgba(var(--accent-rgb), .06);
+}
+.sound-toggle.is-muted { color: var(--muted-2); opacity: .72; }
+.sound-toggle__icon {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 9px;
+}
+
+/* Each syntax argument is a deliberate beat; separators visually belong to the argument that precedes them. */
+.intro-syntax .syntax-token.is-lit {
+  transition-duration: 620ms;
+  transition-timing-function: var(--ease-out);
+}
+.argument-card.is-focused-card {
+  border-color: color-mix(in srgb, var(--arg-color) 32%, transparent);
+  background: color-mix(in srgb, var(--arg-color) 7%, rgba(255,255,255,.026));
+}
+
+/* Primary showcase target: one complete experience viewport, no document scroll. */
+@media (min-width: 1021px) {
+  html,
+  body { height: 100%; }
+  body:not(.is-loading) { overflow: hidden; }
+
+  .topbar {
+    width: min(1480px, calc(100% - 36px));
+    min-height: clamp(58px, 7.6dvh, 74px);
+  }
+
+  .experience {
+    width: min(1480px, calc(100% - 36px));
+    height: calc(100dvh - clamp(58px, 7.6dvh, 74px));
+    box-sizing: border-box;
+    padding: clamp(8px, 1.4dvh, 14px) 0 clamp(70px, 9.6dvh, 84px);
+  }
+
+  .stage-shell {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: 18px minmax(0, 1fr) 18px;
+    gap: clamp(7px, 1.2dvh, 11px);
+  }
+
+  .stage,
+  .stage[data-scene="worked-scene"],
+  .stage[data-scene="anatomy-scene"],
+  .stage[data-scene="dataset-scene"] {
+    min-height: 0 !important;
+    height: 100% !important;
+  }
+
+  .scene {
+    min-height: 0 !important;
+    height: 100%;
+    padding: clamp(18px, 2.2vw, 34px);
+    overflow: hidden;
+  }
+
+  .worked-scene { padding: clamp(16px, 1.9vw, 30px); }
+  .worked-layout,
+  .anatomy-layout,
+  .dataset-only { height: 100%; min-height: 0; }
+
+  .data-panel,
+  .formula-panel,
+  .data-panel--showcase {
+    min-height: 0;
+    height: 100%;
+  }
+
+  .data-panel { padding: clamp(10px, 1.5dvh, 16px); gap: clamp(7px, 1.1dvh, 12px); }
+  .data-table { border-spacing: 0 clamp(4px, .75dvh, 7px); }
+  .data-table th,
+  .data-table td { padding: clamp(6px, 1.05dvh, 11px) clamp(7px, .8vw, 12px); }
+  .data-table tbody td { font-size: clamp(10px, 1.45dvh, 13px); }
+  .data-table thead th { font-size: clamp(8px, 1.2dvh, 11px); }
+  .col-letter { margin-bottom: 2px; }
+
+  .formula-panel {
+    padding: clamp(13px, 1.75vw, 24px);
+    gap: clamp(7px, 1.15dvh, 13px);
+  }
+  .task-card { padding: clamp(12px, 1.65dvh, 18px); }
+  .task-card__text {
+    margin-top: 6px;
+    font-size: clamp(16px, 2.6dvh, 24px);
+  }
+  .logic-line { margin-top: 9px; }
+  .formula-build { min-height: clamp(88px, 15dvh, 126px); gap: 7px; }
+  .formula-code {
+    min-height: clamp(58px, 9dvh, 72px);
+    padding: clamp(10px, 1.5dvh, 15px);
+    font-size: clamp(10px, 1.55dvh, 15px);
+  }
+  .step-note { min-height: 28px; font-size: clamp(10px, 1.45dvh, 12px); }
+  .micro-visual { min-height: clamp(60px, 10dvh, 82px); padding: 10px; }
+  .result-card {
+    min-height: clamp(82px, 13dvh, 108px);
+    padding: clamp(13px, 1.7dvh, 18px);
+  }
+  .result-number { font-size: clamp(38px, 7.2dvh, 64px); }
+  .result-number--text-short { font-size: clamp(26px, 5.3dvh, 50px); }
+  .result-number--text { font-size: clamp(19px, 3.5dvh, 34px); }
+
+  .anatomy-layout { gap: clamp(20px, 3vw, 48px); }
+  .anatomy-title { font-size: clamp(34px, 6.8dvh, 68px); }
+  .scene__copy { margin-top: 12px; font-size: clamp(13px, 1.9dvh, 17px); }
+  .compact-anatomy { margin-top: clamp(14px, 2dvh, 22px); padding: 14px 17px; }
+  .argument-stack { gap: clamp(6px, 1dvh, 10px); align-content: center; }
+  .argument-card,
+  .argument-stack--short .argument-card {
+    min-height: 0;
+    padding: clamp(11px, 1.4dvh, 16px) 16px clamp(11px, 1.4dvh, 16px) 48px;
+  }
+  .argument-card__index { left: 16px; top: clamp(14px, 1.7dvh, 20px); }
+  .argument-card__desc { margin-top: 6px; font-size: clamp(10px, 1.45dvh, 12px); }
+
+  .intro-lockup { padding: 0; }
+  .intro-formula { font-size: clamp(64px, 18dvh, 154px); }
+  .intro-sub { margin-top: clamp(12px, 2dvh, 20px); }
+  .intro-syntax { margin-top: clamp(16px, 3dvh, 30px); padding: clamp(10px, 1.7dvh, 14px) 18px; }
+
+  .cinema-caption {
+    min-height: 0;
+    align-self: center;
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .control-deck {
+    bottom: clamp(8px, 1.3dvh, 14px);
+    padding: 6px;
+  }
+  .control { min-height: clamp(42px, 6.2dvh, 50px); }
+}
+
+@media (min-width: 1021px) and (max-height: 720px) {
+  .brand__copy small { display: none; }
+  .topbar { min-height: 56px; }
+  .experience { height: calc(100dvh - 56px); padding-bottom: 64px; }
+  .stage-meta { font-size: 8px; }
+  .formula-panel { padding: 12px; }
+  .task-card { padding: 10px 12px; }
+  .logic-chip { padding: 5px 8px; font-size: 10px; }
+  .formula-build { min-height: 78px; }
+  .micro-visual { min-height: 54px; }
+  .result-card { min-height: 72px; }
+  .argument-card__desc { line-height: 1.3; }
+}
+
+@media (max-width: 1180px) and (min-width: 1021px) {
+  .sound-toggle span:last-child { display: none; }
+  .sound-toggle { width: 42px; padding: 0; }
+}
+
+@media (max-width: 720px) {
+  .sound-toggle { width: 40px; padding: 0; }
+  .sound-toggle span:last-child { display: none; }
+}

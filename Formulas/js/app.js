@@ -26,7 +26,9 @@ const dom = {
   pointerGlow: document.querySelector(`#stagePointerGlow`),
   loader: document.querySelector(`#experienceLoader`),
   loaderEnter: document.querySelector(`#loaderEnter`),
-  loaderStatus: document.querySelector(`#loaderStatus`)
+  loaderStatus: document.querySelector(`#loaderStatus`),
+  soundToggle: document.querySelector(`#soundToggle`),
+  soundToggleText: document.querySelector(`#soundToggleText`)
 };
 
 const engine = new FormulaMotionEngine(dom);
@@ -34,6 +36,88 @@ const initialFormulaId = new URLSearchParams(window.location.search).get(`formul
 let activeIndex = Math.max(0, formulas.findIndex((formula) => formula.id === initialFormulaId));
 let toastTimer = null;
 let pickerOpen = false;
+
+class MotionSoundDesigner {
+  constructor(toggle, label) {
+    this.toggle = toggle;
+    this.label = label;
+    this.enabled = true;
+    this.context = null;
+    this.master = null;
+  }
+
+  ensureContext() {
+    if (!this.enabled) return null;
+    if (!this.context) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) {
+        this.enabled = false;
+        this.syncUI();
+        return null;
+      }
+      this.context = new AudioContext();
+      this.master = this.context.createGain();
+      this.master.gain.value = 0.18;
+      this.master.connect(this.context.destination);
+    }
+    if (this.context.state === `suspended`) void this.context.resume();
+    return this.context;
+  }
+
+  tone({ frequency = 340, duration = 0.08, gain = 0.045, type = `sine`, slide = 0 }) {
+    const context = this.ensureContext();
+    if (!context || !this.master) return;
+    const now = context.currentTime;
+    const osc = context.createOscillator();
+    const amp = context.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, now);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(Math.max(40, frequency + slide), now + duration);
+    amp.gain.setValueAtTime(0.0001, now);
+    amp.gain.exponentialRampToValueAtTime(gain, now + 0.012);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(amp);
+    amp.connect(this.master);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  }
+
+  play(type) {
+    if (!this.enabled) return;
+    const cues = {
+      argument: () => { this.tone({ frequency: 430, duration: 0.075, gain: 0.038, type: `triangle`, slide: 95 }); },
+      lock: () => { this.tone({ frequency: 265, duration: 0.11, gain: 0.045, type: `triangle`, slide: -42 }); },
+      result: () => {
+        this.tone({ frequency: 420, duration: 0.13, gain: 0.042, type: `sine`, slide: 120 });
+        window.setTimeout(() => this.tone({ frequency: 620, duration: 0.16, gain: 0.035, type: `sine`, slide: 140 }), 70);
+      },
+      mode: () => { this.tone({ frequency: 190, duration: 0.22, gain: 0.05, type: `sawtooth`, slide: 210 }); },
+      transition: () => { this.tone({ frequency: 300, duration: 0.12, gain: 0.028, type: `sine`, slide: 80 }); },
+      step: () => { this.tone({ frequency: 360, duration: 0.065, gain: 0.027, type: `sine`, slide: 45 }); }
+    };
+    (cues[type] ?? cues.step)();
+  }
+
+  setEnabled(enabled) {
+    this.enabled = Boolean(enabled);
+    if (this.enabled) {
+      this.ensureContext();
+      this.play(`step`);
+    }
+    this.syncUI();
+  }
+
+  syncUI() {
+    if (!this.toggle || !this.label) return;
+    this.toggle.setAttribute(`aria-pressed`, String(this.enabled));
+    this.toggle.classList.toggle(`is-muted`, !this.enabled);
+    this.label.textContent = this.enabled ? `SOUND ON` : `SOUND OFF`;
+  }
+}
+
+const soundDesigner = new MotionSoundDesigner(dom.soundToggle, dom.soundToggleText);
+soundDesigner.syncUI();
+window.addEventListener(`formula-motion-sound`, (event) => soundDesigner.play(event.detail?.type));
 
 function formulaDescriptor(formula) {
   const descriptors = {
@@ -129,7 +213,7 @@ function bindButtonFeedback() {
 function bindMagneticControls() {
   if (!window.matchMedia(`(pointer:fine)`).matches) return;
   document.addEventListener(`pointermove`, (event) => {
-    const control = event.target.closest(`.control, .formula-picker__trigger, .formula-option, .mode-pill, .brand__mark, .loader-enter`);
+    const control = event.target.closest(`.control, .formula-picker__trigger, .formula-option, .mode-pill, .sound-toggle, .brand__mark, .loader-enter`);
     if (!control) return;
     const rect = control.getBoundingClientRect();
     const dx = (event.clientX - (rect.left + rect.width / 2)) / Math.max(rect.width, 1);
@@ -139,7 +223,7 @@ function bindMagneticControls() {
     control.style.setProperty(`--mag-y`, `${dy * 6}px`);
   });
   document.addEventListener(`pointerout`, (event) => {
-    const control = event.target.closest(`.control, .formula-picker__trigger, .formula-option, .mode-pill, .brand__mark, .loader-enter`);
+    const control = event.target.closest(`.control, .formula-picker__trigger, .formula-option, .mode-pill, .sound-toggle, .brand__mark, .loader-enter`);
     if (!control || control.contains(event.relatedTarget)) return;
     control.style.setProperty(`--mag-x`, `0px`);
     control.style.setProperty(`--mag-y`, `0px`);
@@ -305,11 +389,15 @@ function bindLoader() {
   window.setTimeout(readyLoader, 2200);
 
   dom.loaderEnter.addEventListener(`click`, () => {
+    soundDesigner.ensureContext();
+    soundDesigner.play(`transition`);
     dom.loader.classList.add(`is-exiting`);
     document.body.classList.remove(`is-loading`);
     window.setTimeout(() => dom.loader.remove(), 760);
   });
 }
+
+dom.soundToggle?.addEventListener(`click`, () => soundDesigner.setEnabled(!soundDesigner.enabled));
 
 populateFormulaPicker();
 updateFormulaNavigation();

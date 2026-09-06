@@ -105,7 +105,7 @@ export class FormulaMotionEngine {
       } else {
         this.isBusy = true;
         this.updateDirectorUI();
-        await this.runStepIndices(this.currentPlan.autoSteps, false, this.currentPlan.autoPace ?? 0.52);
+        await this.runStepIndices(this.currentPlan.autoSteps, false, this.currentPlan.autoPace ?? 0.66);
       }
     }
 
@@ -136,10 +136,11 @@ export class FormulaMotionEngine {
     if (this.actionIndex < this.currentActions.length) {
       const action = this.currentActions[this.actionIndex];
       this.actionIndex += 1;
+      this.emitSound(this.soundForAction(action.label));
       this.isBusy = true;
       this.updateDirectorUI();
       try {
-        await this.runStepIndices(action.indices, false, action.pace ?? 0.55);
+        await this.runStepIndices(action.indices, false, action.pace ?? 0.68);
       } finally {
         this.isBusy = false;
         this.updateDirectorUI();
@@ -153,6 +154,7 @@ export class FormulaMotionEngine {
     }
 
     if (this.sceneIndex < this.sceneFactories.length - 1) {
+      this.emitSound(`transition`);
       await this.renderScene(this.sceneIndex + 1);
       return;
     }
@@ -181,7 +183,7 @@ export class FormulaMotionEngine {
     return stops[index] ?? Math.max(-1, index - 1);
   }
 
-  async runStepIndices(indices, instant = false, pace = 0.55) {
+  async runStepIndices(indices, instant = false, pace = 0.68) {
     for (let position = 0; position < indices.length; position += 1) {
       const step = this.currentSteps[indices[position]];
       if (!step) continue;
@@ -189,40 +191,83 @@ export class FormulaMotionEngine {
       this.stepIndex = Math.max(this.stepIndex, indices[position] + 1);
       if (!instant && duration > 0) {
         const isLast = position === indices.length - 1;
-        const delay = isLast ? Math.min(duration * 0.72, 620) : Math.min(duration * pace, 420);
-        await this.wait(Math.max(90, delay));
+        const delay = isLast ? Math.min(duration * 0.82, 720) : Math.min(duration * pace, 560);
+        await this.wait(Math.max(120, delay));
       }
     }
   }
 
+  syntaxArgumentActions() {
+    const parts = this.formula.syntaxParts ?? [];
+    const isPunctuation = (value) => /^[\s,\[\]().…]+$/.test(String(value));
+    const argumentTokens = [];
+
+    for (let tokenIndex = 1; tokenIndex < parts.length; tokenIndex += 1) {
+      if (!isPunctuation(parts[tokenIndex])) argumentTokens.push(tokenIndex);
+    }
+
+    return argumentTokens.map((tokenIndex, argumentIndex) => {
+      const nextArgumentToken = argumentTokens[argumentIndex + 1] ?? parts.length;
+      const tokenIndexes = [];
+      for (let cursor = tokenIndex; cursor < nextArgumentToken; cursor += 1) tokenIndexes.push(cursor);
+      const argument = this.formula.arguments?.[argumentIndex];
+      return {
+        label: `Reveal ${argument?.name ?? parts[tokenIndex]}`,
+        indices: tokenIndexes.map((index) => 3 + index),
+        pace: 0.64
+      };
+    });
+  }
+
+  emitSound(type = `step`) {
+    window.dispatchEvent(new CustomEvent(`formula-motion-sound`, { detail: { type } }));
+  }
+
+  soundForAction(label = ``) {
+    const value = String(label).toLowerCase();
+    if (value.includes(`result`) || value.includes(`reveal`) && /\d/.test(value)) return `result`;
+    if (value.includes(`hard`)) return `mode`;
+    if (value.includes(`match`) || value.includes(`lock`)) return `lock`;
+    if (value.includes(`argument`) || value.includes(`range`) || value.includes(`criterion`) || value.includes(`test`)) return `argument`;
+    return `step`;
+  }
+
   createInteractionPlan(index, steps) {
     const all = steps.map((_, stepIndex) => stepIndex);
-    const plan = { autoSteps: [], actions: [], autoAdvance: false, autoAdvanceAfterActions: false, autoPace: 0.5 };
+    const plan = { autoSteps: [], actions: [], autoAdvance: false, autoAdvanceAfterActions: false, autoPace: 0.58 };
 
     if (index === 0) {
-      plan.actions = [
-        { label: `Reveal ${this.formula.displayName}`, indices: [0, 1], pace: 0.48 },
-        { label: `Decode the syntax`, indices: all.slice(2), pace: 0.34 }
-      ].filter((action) => action.indices.length);
+      // Formula identity + syntax shell arrive automatically. Every argument itself remains user-controlled.
+      plan.autoSteps = all.slice(0, Math.min(4, all.length));
+      plan.autoPace = 0.64;
+      plan.actions = this.syntaxArgumentActions();
       plan.autoAdvanceAfterActions = true;
       return plan;
     }
 
     if (index === 1) {
-      plan.actions = all.length ? [{ label: `Map the arguments`, indices: all, pace: 0.38 }] : [];
+      // One click per argument card. No micro-clicks for punctuation or decoration.
+      plan.actions = all.map((stepIndex, argumentIndex) => ({
+        label: `Argument ${String(argumentIndex + 1).padStart(2, `0`)} · ${this.formula.arguments?.[argumentIndex]?.name ?? `Explain`}`,
+        indices: [stepIndex],
+        pace: 0.68
+      }));
       plan.autoAdvanceAfterActions = true;
       return plan;
     }
 
     if (index === 2) {
+      // Dataset is context, not a click gate: reveal it naturally and move into the example.
       plan.autoSteps = all;
       plan.autoAdvance = true;
-      plan.autoPace = 0.38;
+      plan.autoPace = 0.62;
       return plan;
     }
 
     if (index === 3 || index === 6) {
+      // Task + live table arrive with the scene. User controls the meaningful formula beats.
       plan.autoSteps = all.slice(0, 2);
+      plan.autoPace = 0.68;
       plan.actions = this.groupWorkedActions(all.slice(2), index === 3 ? this.formula.basic : this.formula.hard);
       plan.autoAdvanceAfterActions = index === 3;
       return plan;
@@ -230,20 +275,20 @@ export class FormulaMotionEngine {
 
     if (index === 4) {
       plan.autoSteps = all;
-      plan.autoPace = 0.48;
+      plan.autoPace = 0.62;
       return plan;
     }
 
     if (index === 5) {
       plan.autoSteps = all;
       plan.autoAdvance = true;
-      plan.autoPace = 0.5;
+      plan.autoPace = 0.64;
       return plan;
     }
 
     if (index === 7) {
       plan.autoSteps = all;
-      plan.autoPace = 0.48;
+      plan.autoPace = 0.62;
       return plan;
     }
 
@@ -254,53 +299,53 @@ export class FormulaMotionEngine {
   groupWorkedActions(indices, example) {
     const count = example.visual.criteria?.length ?? 0;
     const type = example.visual.type;
-    const action = (label, values, pace = 0.5) => ({ label, indices: values.filter((value) => Number.isInteger(value)), pace });
+    const action = (label, values, pace = 0.62) => ({ label, indices: values.filter((value) => Number.isInteger(value)), pace });
 
     if (type === `aggregate`) {
       return [
-        action(`Map ranges + criteria`, indices.slice(0, 1 + count), 0.46),
-        action(`Lock matching rows`, [indices[1 + count]], 0.55),
-        action(`Combine + reveal result`, indices.slice(2 + count), 0.52)
+        action(`Map ranges + criteria`, indices.slice(0, 1 + count), 0.62),
+        action(`Lock matching rows`, [indices[1 + count]], 0.68),
+        action(`Combine + reveal result`, indices.slice(2 + count), 0.66)
       ];
     }
 
     if (type === `count`) {
       return [
-        action(`Apply all conditions`, indices.slice(0, count), 0.46),
-        action(`Count matches + reveal`, indices.slice(count), 0.5)
+        action(`Apply all conditions`, indices.slice(0, count), 0.62),
+        action(`Count matches + reveal`, indices.slice(count), 0.64)
       ];
     }
 
     if (type === `lookup`) {
       return [
-        action(`Search + lock match`, indices.slice(0, 2), 0.5),
-        action(`Retrieve + reveal result`, indices.slice(2), 0.48)
+        action(`Search + lock match`, indices.slice(0, 2), 0.64),
+        action(`Retrieve + reveal result`, indices.slice(2), 0.62)
       ];
     }
 
     if (type === `logic`) {
       const checks = example.visual.checks?.length ?? 0;
       return [
-        action(`Evaluate the decision`, indices.slice(0, 1 + checks), 0.46),
-        action(`Choose branch + reveal`, indices.slice(1 + checks), 0.52)
+        action(`Evaluate the decision`, indices.slice(0, 1 + checks), 0.62),
+        action(`Choose branch + reveal`, indices.slice(1 + checks), 0.66)
       ];
     }
 
     if (type === `threshold`) {
       return [
-        action(`Run the IFS cascade`, indices.slice(0, -1), 0.46),
-        action(`Reveal first TRUE`, indices.slice(-1), 0.55)
+        action(`Run the IFS cascade`, indices.slice(0, -1), 0.62),
+        action(`Reveal first TRUE`, indices.slice(-1), 0.68)
       ];
     }
 
     if (type === `filter`) {
       return [
-        action(`Define + test the filter`, indices.slice(0, 1 + count), 0.44),
-        action(`Keep + spill + reveal`, indices.slice(1 + count), 0.48)
+        action(`Define + test the filter`, indices.slice(0, 1 + count), 0.60),
+        action(`Keep + spill + reveal`, indices.slice(1 + count), 0.62)
       ];
     }
 
-    return [action(`Build + reveal`, indices, 0.5)];
+    return [action(`Build + reveal`, indices, 0.64)];
   }
 
   wait(ms) {
@@ -386,7 +431,7 @@ export class FormulaMotionEngine {
   buildIntroScene() {
     const f = this.formula;
     this.setMode(`basic`);
-    this.setCaption(`You control the story. One click launches one meaningful teaching beat.`);
+    this.setCaption(`Formula identity enters automatically. Then: one click, one argument — punctuation follows naturally.`);
     const scene = this.mount(`
       <div class="intro-lockup">
         <div class="intro-orbit" aria-hidden="true"></div>
@@ -424,7 +469,7 @@ export class FormulaMotionEngine {
   buildAnatomyScene() {
     const f = this.formula;
     this.setMode(`basic`);
-    this.setCaption(`One click maps the full syntax anatomy with a fast, readable cascade.`);
+    this.setCaption(`One argument per click. Clear, deliberate, and fast enough to stay engaging.`);
     const title = this.escape(f.identity.anatomyTitle).replaceAll(`\n`, `<br>`);
     const scene = this.mount(`
       <div class="anatomy-layout">

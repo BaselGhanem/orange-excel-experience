@@ -1,46 +1,48 @@
-# Formula Motion v6 — QA Report
+# Formula Motion v8 QA Report
 
-## Scope
-Verified modules: SUMIFS, XLOOKUP, COUNTIFS, IF, IFS, FILTER. Each module was checked in Basic and Hard mode (12 worked examples total).
+## Automated checks
 
-## Automated formula/data assertions
-- Exact top-level argument parsing for every worked formula.
-- Syntax argument-beat count matches each formula definition.
-- Excel range letters map to the intended dataset columns.
-- SUMIFS matched rows, matched values, and totals recomputed from source data.
-- COUNTIFS matches and counts recomputed from source data.
-- XLOOKUP lookup/return ranges, matched row, and returned value recomputed.
-- IF selected branch verified against configured result.
-- IFS selected threshold and result recomputed from dataset values.
-- FILTER matched rows and spilled row counts recomputed.
+- Formula/range/result validation: **42/42 passed**
+- Argument-beat interaction validation: **12/12 passed**
+- Visible-output integrity validation: **24/24 passed**
 
-Result: **42 / 42 assertions passed**.
+## Verified visible results
 
-## Automated interaction assertions
-For every Basic/Hard worked example:
-- Number of worked actions = number of top-level formula arguments + one final solve beat.
-- Every argument action reveals exactly one argument index.
-- No argument action reveals the next argument automatically.
-- Range arguments highlight only their mapped dataset column.
-- SUMIFS `sum_range D2:D7` maps to `sales / column D`, never Area / A.
-- SUMIFS/COUNTIFS criteria-range and criteria-value beats map to their correct columns.
-- XLOOKUP lookup_array and return_array map to their correct columns.
-- FILTER include argument maps to all columns participating in its Boolean include expression.
+### SUMIFS
+- Basic — Area = Amman
+  - Matching rows: 1, 3, 5 of the dataset body
+  - Sales values: 1,250 + 940 + 660
+  - Result: **2,850**
+- Hard — Area = Amman AND Product = 5G
+  - Matching rows: 3, 5
+  - Sales values: 940 + 660
+  - Result: **1,600**
 
-Result: **12 / 12 worked-example interaction plans passed**.
+### XLOOKUP
+- Basic — P103 → Price **115**
+- Hard — P105 → Price **140**
 
-## Code integrity
-- `node --check` passed for all JavaScript modules.
-- CSS brace integrity checked: balanced blocks in both stylesheets.
-- Native formula `<select>` is not present in the UI; the custom Formula Library remains in use.
+### COUNTIFS
+- Basic — Area = Amman → **3** matching rows
+- Hard — Area = Amman AND Product = 5G → **2** matching rows
 
-## Layout corrections in v6
-- Formula assembly no longer shows blurred/ghosted future arguments.
-- Future arguments are invisible until their beat is triggered.
-- Right worked panel uses explicit CSS grid rows instead of flex `space-between`, preventing sections from visually colliding.
-- Formula assembly uses controlled wrapping and fixed maximum vertical allocation.
-- Desktop short-height breakpoints were tightened for 820px and 700px viewport heights.
-- Task, formula, micro-visual, and result areas have isolated layout bounds.
+### IF
+- Basic — C104: 27 <= 24 is FALSE → **Late**
+- Hard — C104: Open AND (3 >= 3 OR 27 > 24) is TRUE → **Escalate**
 
-## Browser-render limitation of this environment
-The installed Chromium instance is organization-policy blocked from opening localhost, container IPs, file URLs, and data URLs. Therefore a new automated Chromium screenshot pass cannot truthfully be claimed from this environment. The final build includes the static/data/interaction QA above, and the collision fixes were made directly against the supplied failure screenshot and the affected layout rules.
+### IFS
+- Basic — C202 = 90% → **Within SLA**
+- Hard — C203 = 112% → **Watch**
+
+### FILTER
+- Basic — Area = Amman → **3 spilled rows**, verified payloads:
+  1. Amman | Fiber | Ali | 1,250
+  2. Amman | 5G | Omar | 940
+  3. Amman | 5G | Ali | 660
+- Hard — Area = Amman AND Product = 5G → **2 spilled rows**:
+  1. Amman | 5G | Omar | 940
+  2. Amman | 5G | Ali | 660
+
+## v8 display fix
+
+FILTER no longer uses the generic short micro-visual height. The spill panel now reserves enough vertical space for the complete dynamic-array result, including all matching rows, on normal and short desktop viewports.

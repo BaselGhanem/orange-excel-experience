@@ -15,17 +15,20 @@ Every formula contains a complete Basic Mode and Hard Mode sequence, its own dat
 
 ## Interaction model
 
-Formula Motion v3 is fully trainer-directed:
+Formula Motion v4 uses a **Smart Director** model: the trainer controls the important beats, while micro-motions inside each beat choreograph themselves.
 
-- No teaching beat advances automatically.
-- `Next Motion` triggers exactly one teaching beat.
-- `Back` reconstructs the previous motion state.
+- Click anywhere inside the execution Stage to continue; the footer button is optional.
+- `ArrowRight` or `ArrowDown` launches the next meaningful beat.
+- `ArrowLeft` or `ArrowUp` reconstructs the previous meaningful beat.
+- The syntax is grouped intelligently: punctuation and individual tokens animate automatically inside one syntax reveal instead of requiring separate clicks.
+- Argument cards cascade automatically inside one anatomy action.
+- The training dataset and task reveal automatically when entering the worked example; showing the table never costs an extra click.
+- Formula-specific logic is grouped into meaningful actions. For example, SUMIFS uses `Map ranges + criteria`, `Lock matching rows`, and `Combine + reveal result`.
+- Basic-result presentation, dataset transitions, and the Hard Mode switch are cinematic continuations of the action that launched them rather than standalone click gates.
+- `Back` moves between meaningful interaction states instead of every micro-animation.
 - `Restart` returns the active formula to its first untouched scene.
-- Hard Mode waits for the trainer to trigger the switch.
-- Formula changes happen only after the trainer selects a formula or uses Previous/Next Formula.
-- Buttons use click ripple / press choreography.
-- Fine-pointer devices get a custom cursor, spotlight, subtle stage tilt, ambient parallax, and magnetic controls.
-- The only autonomous animation is the initial loading screen; entering the experience still requires an explicit click.
+- Buttons still use click ripple / press choreography, and Stage clicks create their own localized motion wave.
+- Fine-pointer devices keep the custom cursor, spotlight, subtle stage tilt, ambient parallax, and magnetic controls.
 
 ## Premium formula library
 
@@ -65,10 +68,10 @@ Formula modules can also be opened directly with query parameters:
 - `index.html` — semantic application shell, loader, formula library, motion controls
 - `css/design-system.css` — shared design tokens and global foundations
 - `css/app.css` — motion system, formula identities, tables, pointer system, loader, controls, responsive behavior
-- `js/core/engine.js` — reusable click-directed rendering/sequencing engine and visual primitives
+- `js/core/engine.js` — reusable smart-action rendering/sequencing engine, micro-step batching, and visual primitives
 - `js/formulas/*.js` — independent formula configuration/modules
 - `js/formulas/index.js` — formula registry
-- `js/app.js` — navigation, formula picker, pointer choreography, loader, deep-link state
+- `js/app.js` — navigation, formula picker, Stage-wide click control, keyboard arrows, pointer choreography, loader, deep-link state
 
 ## Adding another formula
 

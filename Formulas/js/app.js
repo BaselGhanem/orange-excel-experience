@@ -240,6 +240,53 @@ function bindFormulaPicker() {
   });
 }
 
+
+function bindStageDirector() {
+  dom.stage.setAttribute(`tabindex`, `0`);
+  dom.stage.setAttribute(`role`, `button`);
+  dom.stage.setAttribute(`aria-label`, `Formula execution stage. Click anywhere or use arrow keys to continue.`);
+  const hint = document.createElement(`div`);
+  hint.className = `stage-director-hint`;
+  hint.setAttribute(`aria-hidden`, `true`);
+  hint.innerHTML = `<span>CLICK ANYWHERE</span><span>←</span><span>→</span>`;
+  dom.stage.append(hint);
+
+  dom.stage.addEventListener(`click`, (event) => {
+    if (document.body.classList.contains(`is-loading`) || engine.isBusy) return;
+    const blocked = event.target.closest(`button, a, input, select, textarea, [role="button"]`);
+    if (blocked && blocked !== dom.stage) return;
+
+    const rect = dom.stage.getBoundingClientRect();
+    const wave = document.createElement(`span`);
+    wave.className = `stage-click-wave`;
+    wave.style.left = `${event.clientX - rect.left}px`;
+    wave.style.top = `${event.clientY - rect.top}px`;
+    dom.stage.append(wave);
+    window.setTimeout(() => wave.remove(), 720);
+    void engine.nextStep();
+  });
+}
+
+function bindKeyboardDirector() {
+  document.addEventListener(`keydown`, (event) => {
+    if (document.body.classList.contains(`is-loading`) || pickerOpen) return;
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    if ([`input`, `textarea`, `select`].includes(tag)) return;
+
+    if (event.key === `ArrowRight` || event.key === `ArrowDown`) {
+      event.preventDefault();
+      void engine.nextStep();
+      return;
+    }
+
+    if (event.key === `ArrowLeft` || event.key === `ArrowUp`) {
+      event.preventDefault();
+      void engine.previousStep();
+    }
+  });
+}
+
 function bindLoader() {
   const loaderStartedAt = performance.now();
   let loaderReady = false;
@@ -270,6 +317,8 @@ bindButtonFeedback();
 bindMagneticControls();
 bindPointerExperience();
 bindFormulaPicker();
+bindStageDirector();
+bindKeyboardDirector();
 bindLoader();
 loadFormula(activeIndex);
 

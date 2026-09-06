@@ -29,6 +29,9 @@ export class FormulaMotionEngine {
     this.stepIndex = 0;
     this.currentScene = null;
     this.currentSteps = [];
+    this.currentActions = [];
+    this.currentPlan = null;
+    this.actionIndex = 0;
     this.isBusy = false;
     this.sceneFactories = [];
   }
@@ -62,7 +65,7 @@ export class FormulaMotionEngine {
     this.clearTimers();
     this.setMode(`basic`);
     this.sceneIndex = 0;
-    this.renderScene(0);
+    void this.renderScene(0);
   }
 
   replay() {
@@ -81,24 +84,48 @@ export class FormulaMotionEngine {
     return id;
   }
 
-  renderScene(index, { restoreSteps = 0 } = {}) {
+  async renderScene(index, { restoreActions = 0, suppressAutoAdvance = false } = {}) {
     this.clearTimers();
     this.sceneIndex = index;
     this.stepIndex = 0;
+    this.actionIndex = 0;
     const built = this.sceneFactories[index]();
     this.currentScene = built.scene;
     this.currentSteps = built.steps;
+    this.currentPlan = this.createInteractionPlan(index, built.steps);
+    this.currentActions = this.currentPlan.actions;
     this.updateSceneMeta(index, this.sceneFactories.length);
 
-    if (restoreSteps > 0) {
-      this.currentScene.classList.add(`is-restoring`);
-      for (let i = 0; i < restoreSteps; i += 1) {
-        this.currentSteps[i]?.run(true);
+    const restoring = restoreActions > 0 || suppressAutoAdvance;
+    if (restoring) this.currentScene.classList.add(`is-restoring`);
+
+    if (this.currentPlan.autoSteps.length > 0) {
+      if (restoring) {
+        this.runStepIndices(this.currentPlan.autoSteps, true);
+      } else {
+        this.isBusy = true;
+        this.updateDirectorUI();
+        await this.runStepIndices(this.currentPlan.autoSteps, false, this.currentPlan.autoPace ?? 0.52);
       }
-      this.stepIndex = Math.min(restoreSteps, this.currentSteps.length);
-      requestAnimationFrame(() => this.currentScene?.classList.remove(`is-restoring`));
     }
 
+    if (restoreActions > 0) {
+      const count = Math.min(restoreActions, this.currentActions.length);
+      for (let i = 0; i < count; i += 1) this.runStepIndices(this.currentActions[i].indices, true);
+      this.actionIndex = count;
+    }
+
+    if (restoring) requestAnimationFrame(() => this.currentScene?.classList.remove(`is-restoring`));
+
+    if (!suppressAutoAdvance && this.currentPlan.autoAdvance) {
+      await this.wait(260);
+      if (this.sceneIndex === index && index < this.sceneFactories.length - 1) {
+        await this.renderScene(index + 1);
+        return;
+      }
+    }
+
+    this.isBusy = false;
     this.updateDirectorUI();
   }
 
@@ -106,49 +133,174 @@ export class FormulaMotionEngine {
     if (this.isBusy || !this.formula) return;
     this.pulseControl(this.stepNext);
 
-    if (this.stepIndex < this.currentSteps.length) {
-      const step = this.currentSteps[this.stepIndex];
-      this.stepIndex += 1;
+    if (this.actionIndex < this.currentActions.length) {
+      const action = this.currentActions[this.actionIndex];
+      this.actionIndex += 1;
       this.isBusy = true;
       this.updateDirectorUI();
       try {
-        const duration = Number(step.run(false)) || 0;
-        if (duration > 0) await this.wait(Math.min(duration, 1100));
+        await this.runStepIndices(action.indices, false, action.pace ?? 0.55);
       } finally {
         this.isBusy = false;
         this.updateDirectorUI();
+      }
+
+      if (this.actionIndex >= this.currentActions.length && this.currentPlan.autoAdvanceAfterActions) {
+        await this.wait(260);
+        if (this.sceneIndex < this.sceneFactories.length - 1) await this.renderScene(this.sceneIndex + 1);
       }
       return;
     }
 
     if (this.sceneIndex < this.sceneFactories.length - 1) {
-      this.renderScene(this.sceneIndex + 1);
+      await this.renderScene(this.sceneIndex + 1);
       return;
     }
 
     this.pulseStage(`complete`);
   }
 
-  previousStep() {
+  async previousStep() {
     if (this.isBusy || !this.formula) return;
     this.pulseControl(this.stepBack);
 
-    if (this.stepIndex > 0) {
-      const target = this.stepIndex - 1;
-      this.renderScene(this.sceneIndex, { restoreSteps: target });
+    if (this.actionIndex > 0) {
+      const target = this.actionIndex - 1;
+      await this.renderScene(this.sceneIndex, { restoreActions: target, suppressAutoAdvance: true });
       return;
     }
 
-    if (this.sceneIndex > 0) {
-      const previousIndex = this.sceneIndex - 1;
-      this.renderScene(previousIndex);
-      const previousLength = this.currentSteps.length;
-      this.currentScene.classList.add(`is-restoring`);
-      for (let i = 0; i < previousLength; i += 1) this.currentSteps[i]?.run(true);
-      this.stepIndex = previousLength;
-      requestAnimationFrame(() => this.currentScene?.classList.remove(`is-restoring`));
-      this.updateDirectorUI();
+    const previousIndex = this.previousInteractionScene(this.sceneIndex);
+    if (previousIndex >= 0) {
+      await this.renderScene(previousIndex, { restoreActions: Number.MAX_SAFE_INTEGER, suppressAutoAdvance: true });
     }
+  }
+
+  previousInteractionScene(index) {
+    const stops = { 1: 0, 3: 1, 4: 3, 6: 4, 7: 6 };
+    return stops[index] ?? Math.max(-1, index - 1);
+  }
+
+  async runStepIndices(indices, instant = false, pace = 0.55) {
+    for (let position = 0; position < indices.length; position += 1) {
+      const step = this.currentSteps[indices[position]];
+      if (!step) continue;
+      const duration = Number(step.run(instant)) || 0;
+      this.stepIndex = Math.max(this.stepIndex, indices[position] + 1);
+      if (!instant && duration > 0) {
+        const isLast = position === indices.length - 1;
+        const delay = isLast ? Math.min(duration * 0.72, 620) : Math.min(duration * pace, 420);
+        await this.wait(Math.max(90, delay));
+      }
+    }
+  }
+
+  createInteractionPlan(index, steps) {
+    const all = steps.map((_, stepIndex) => stepIndex);
+    const plan = { autoSteps: [], actions: [], autoAdvance: false, autoAdvanceAfterActions: false, autoPace: 0.5 };
+
+    if (index === 0) {
+      plan.actions = [
+        { label: `Reveal ${this.formula.displayName}`, indices: [0, 1], pace: 0.48 },
+        { label: `Decode the syntax`, indices: all.slice(2), pace: 0.34 }
+      ].filter((action) => action.indices.length);
+      plan.autoAdvanceAfterActions = true;
+      return plan;
+    }
+
+    if (index === 1) {
+      plan.actions = all.length ? [{ label: `Map the arguments`, indices: all, pace: 0.38 }] : [];
+      plan.autoAdvanceAfterActions = true;
+      return plan;
+    }
+
+    if (index === 2) {
+      plan.autoSteps = all;
+      plan.autoAdvance = true;
+      plan.autoPace = 0.38;
+      return plan;
+    }
+
+    if (index === 3 || index === 6) {
+      plan.autoSteps = all.slice(0, 2);
+      plan.actions = this.groupWorkedActions(all.slice(2), index === 3 ? this.formula.basic : this.formula.hard);
+      plan.autoAdvanceAfterActions = index === 3;
+      return plan;
+    }
+
+    if (index === 4) {
+      plan.autoSteps = all;
+      plan.autoPace = 0.48;
+      return plan;
+    }
+
+    if (index === 5) {
+      plan.autoSteps = all;
+      plan.autoAdvance = true;
+      plan.autoPace = 0.5;
+      return plan;
+    }
+
+    if (index === 7) {
+      plan.autoSteps = all;
+      plan.autoPace = 0.48;
+      return plan;
+    }
+
+    plan.actions = all.length ? [{ label: `Continue`, indices: all }] : [];
+    return plan;
+  }
+
+  groupWorkedActions(indices, example) {
+    const count = example.visual.criteria?.length ?? 0;
+    const type = example.visual.type;
+    const action = (label, values, pace = 0.5) => ({ label, indices: values.filter((value) => Number.isInteger(value)), pace });
+
+    if (type === `aggregate`) {
+      return [
+        action(`Map ranges + criteria`, indices.slice(0, 1 + count), 0.46),
+        action(`Lock matching rows`, [indices[1 + count]], 0.55),
+        action(`Combine + reveal result`, indices.slice(2 + count), 0.52)
+      ];
+    }
+
+    if (type === `count`) {
+      return [
+        action(`Apply all conditions`, indices.slice(0, count), 0.46),
+        action(`Count matches + reveal`, indices.slice(count), 0.5)
+      ];
+    }
+
+    if (type === `lookup`) {
+      return [
+        action(`Search + lock match`, indices.slice(0, 2), 0.5),
+        action(`Retrieve + reveal result`, indices.slice(2), 0.48)
+      ];
+    }
+
+    if (type === `logic`) {
+      const checks = example.visual.checks?.length ?? 0;
+      return [
+        action(`Evaluate the decision`, indices.slice(0, 1 + checks), 0.46),
+        action(`Choose branch + reveal`, indices.slice(1 + checks), 0.52)
+      ];
+    }
+
+    if (type === `threshold`) {
+      return [
+        action(`Run the IFS cascade`, indices.slice(0, -1), 0.46),
+        action(`Reveal first TRUE`, indices.slice(-1), 0.55)
+      ];
+    }
+
+    if (type === `filter`) {
+      return [
+        action(`Define + test the filter`, indices.slice(0, 1 + count), 0.44),
+        action(`Keep + spill + reveal`, indices.slice(1 + count), 0.48)
+      ];
+    }
+
+    return [action(`Build + reveal`, indices, 0.5)];
   }
 
   wait(ms) {
@@ -162,7 +314,7 @@ export class FormulaMotionEngine {
 
   updateDirectorUI() {
     if (!this.stepNext || !this.stepNextLabel || !this.motionCounter) return;
-    const atSceneEnd = this.stepIndex >= this.currentSteps.length;
+    const atSceneEnd = this.actionIndex >= this.currentActions.length;
     const atExperienceEnd = atSceneEnd && this.sceneIndex >= this.sceneFactories.length - 1;
     const nextSceneName = this.sceneName(this.sceneIndex + 1);
 
@@ -171,17 +323,17 @@ export class FormulaMotionEngine {
       this.motionCounter.textContent = `DONE`;
       this.stepNext.classList.add(`is-complete`);
     } else if (atSceneEnd) {
-      this.stepNextLabel.textContent = `Enter ${nextSceneName}`;
-      this.motionCounter.textContent = `NEXT SCENE`;
+      this.stepNextLabel.textContent = `Continue`;
+      this.motionCounter.textContent = this.isBusy ? `PLAYING` : `→`;
       this.stepNext.classList.remove(`is-complete`);
     } else {
-      const step = this.currentSteps[this.stepIndex];
-      this.stepNextLabel.textContent = step?.label ?? `Next Motion`;
-      this.motionCounter.textContent = `${String(this.stepIndex + 1).padStart(2, `0`)} / ${String(this.currentSteps.length).padStart(2, `0`)}`;
+      const action = this.currentActions[this.actionIndex];
+      this.stepNextLabel.textContent = action?.label ?? `Next Motion`;
+      this.motionCounter.textContent = `${String(this.actionIndex + 1).padStart(2, `0`)} / ${String(this.currentActions.length).padStart(2, `0`)}`;
       this.stepNext.classList.remove(`is-complete`);
     }
 
-    this.stepBack.disabled = this.sceneIndex === 0 && this.stepIndex === 0;
+    this.stepBack.disabled = this.sceneIndex === 0 && this.actionIndex === 0;
     this.stepNext.disabled = this.isBusy;
   }
 
@@ -234,7 +386,7 @@ export class FormulaMotionEngine {
   buildIntroScene() {
     const f = this.formula;
     this.setMode(`basic`);
-    this.setCaption(`You control every motion. Reveal the formula one teaching beat at a time.`);
+    this.setCaption(`You control the story. One click launches one meaningful teaching beat.`);
     const scene = this.mount(`
       <div class="intro-lockup">
         <div class="intro-orbit" aria-hidden="true"></div>
@@ -272,7 +424,7 @@ export class FormulaMotionEngine {
   buildAnatomyScene() {
     const f = this.formula;
     this.setMode(`basic`);
-    this.setCaption(`Each click isolates one argument and gives it one clear job.`);
+    this.setCaption(`One click maps the full syntax anatomy with a fast, readable cascade.`);
     const title = this.escape(f.identity.anatomyTitle).replaceAll(`\n`, `<br>`);
     const scene = this.mount(`
       <div class="anatomy-layout">
@@ -308,7 +460,7 @@ export class FormulaMotionEngine {
   buildDatasetScene() {
     const { dataset } = this.formula;
     this.setMode(`basic`);
-    this.setCaption(`Column headers stay visible. You decide when the data is revealed and where attention moves.`);
+    this.setCaption(`The dataset reveals itself as the story enters the example. Column headers stay visible at all times.`);
     const scene = this.mount(`
       <div class="worked-layout dataset-only">
         <div class="data-panel data-panel--showcase">
@@ -340,7 +492,7 @@ export class FormulaMotionEngine {
     this.setMode(example.mode);
     const hard = example.mode === `hard`;
     const visual = example.visual;
-    this.setCaption(`${hard ? `Hard` : `Basic`} Mode is now click-controlled. Trigger each logical beat when you are ready.`);
+    this.setCaption(`${hard ? `Hard` : `Basic`} Mode. Click anywhere in the stage or use the arrow keys to launch the next meaningful beat.`);
 
     const scene = this.mount(`
       <div class="worked-layout worked-layout--${visual.type}">
@@ -656,7 +808,7 @@ export class FormulaMotionEngine {
   buildBasicResultScene() {
     const example = this.formula.basic;
     this.setMode(`basic`);
-    this.setCaption(`Basic Mode is complete. You decide when to lock the pattern and when to move on.`);
+    this.setCaption(`Basic Mode is complete. One action takes you into the harder pattern when you are ready.`);
     const scene = this.mount(`
       <div class="outro-lockup result-lockup manual-result-lockup">
         <div class="scene__kicker">Basic pattern locked</div>
@@ -682,7 +834,7 @@ export class FormulaMotionEngine {
   buildHardTransitionScene() {
     const hard = this.formula.hard;
     this.setMode(`basic`);
-    this.setCaption(`Hard Mode waits for you. The switch will not move until you trigger it.`);
+    this.setCaption(`Hard Mode is armed. Your next action launches the transition and lands directly in the harder example.`);
     const scene = this.mount(`
       <div class="mode-energy" aria-hidden="true"></div>
       <div class="mode-transition">

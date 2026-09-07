@@ -2,10 +2,10 @@ const [appModule,firestoreModule]=await Promise.all([
   import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),
   import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
 ]);
-const {initializeApp}=appModule;
+const {initializeApp,getApps,getApp}=appModule;
 const {getFirestore,collection,getDocs,doc,getDoc,setDoc,deleteDoc,serverTimestamp}=firestoreModule;
 const firebaseConfig={apiKey:`AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,authDomain:`mobilehub-4eb1d.firebaseapp.com`,projectId:`mobilehub-4eb1d`,storageBucket:`mobilehub-4eb1d.firebasestorage.app`,messagingSenderId:`13420871425`,appId:`1:13420871425:web:e253fe9c5aebbc5925a500`,measurementId:`G-RYWYCQXBT8`};
-const db=getFirestore(initializeApp(firebaseConfig));
+const firebaseApp=getApps().length?getApp():initializeApp(firebaseConfig);const db=getFirestore(firebaseApp);
 const COLLECTION=`orangeExcelAssessments`;
 const CONFIG_COLLECTION=`orangeExcelConfig`;
 const CONFIG_DOC=`site`;

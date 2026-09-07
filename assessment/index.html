@@ -452,7 +452,7 @@
       import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)
     ]);
 
-    const { initializeApp } = firebaseAppModule;
+    const { initializeApp, getApps, getApp } = firebaseAppModule;
     const { getAnalytics, isSupported } = firebaseAnalyticsModule;
     const { getFirestore, doc, setDoc, getDoc, getDocs, collection, serverTimestamp } = firebaseFirestoreModule;
 
@@ -466,7 +466,7 @@
       measurementId: `G-RYWYCQXBT8`
     };
 
-    const firebaseApp = initializeApp(firebaseConfig);
+    const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(firebaseApp);
     isSupported().then((supported) => {
       if (supported) getAnalytics(firebaseApp);

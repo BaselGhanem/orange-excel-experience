@@ -35,18 +35,54 @@
 <footer class="footer"><div class="container">CODERZ Academy × Orange Jordan • Advanced Microsoft Excel • Trainer: Basel Ghanem • 2026</div></footer>
 <script type="module">
 const [appModule,firestoreModule]=await Promise.all([import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js`)]);
-const {initializeApp}=appModule;const {getFirestore,doc,getDoc}=firestoreModule;
+const {initializeApp,getApps,getApp}=appModule;const {getFirestore,doc,onSnapshot}=firestoreModule;
 const firebaseConfig={apiKey:`AIzaSyDmkPioDg5ZewsX2ANM1hAqgVWyzLeezeU`,authDomain:`mobilehub-4eb1d.firebaseapp.com`,projectId:`mobilehub-4eb1d`,storageBucket:`mobilehub-4eb1d.firebasestorage.app`,messagingSenderId:`13420871425`,appId:`1:13420871425:web:e253fe9c5aebbc5925a500`,measurementId:`G-RYWYCQXBT8`};
-const db=getFirestore(initializeApp(firebaseConfig));
+const firebaseApp=getApps().length?getApp():initializeApp(firebaseConfig);
+const db=getFirestore(firebaseApp);
 const defaultConfig={siteLive:true,introVisible:true,resetNonce:``,announcementEnabled:false,announcementText:``,assessmentEnabled:true,assessmentPhase:`pre`,attendanceEnabled:false,attendanceDay:0,dayVisibility:{day1:false,day2:false,day3:false}};
-let config={...defaultConfig};
-try{const snap=await getDoc(doc(db,`orangeExcelConfig`,`site`));if(snap.exists())config={...defaultConfig,...snap.data(),dayVisibility:{...defaultConfig.dayVisibility,...(snap.data().dayVisibility||{})}}}catch(error){console.error(error)}
-if(config.resetNonce&&localStorage.getItem(`orangeExcelResetNonce`)!==config.resetNonce){[`orangeExcelAttendanceDoneDay`,`orangeExcelParticipant`,`coderzOrangeParticipantName`].forEach((k)=>localStorage.removeItem(k));Object.keys(localStorage).filter((k)=>k.startsWith(`orangePulse_`)).forEach((k)=>localStorage.removeItem(k));localStorage.setItem(`orangeExcelResetNonce`,config.resetNonce)}
-document.querySelectorAll(`[data-intro-section]`).forEach((el)=>el.classList.toggle(`hidden`,config.introVisible===false));document.querySelectorAll(`[data-intro-nav]`).forEach((el)=>el.classList.toggle(`hidden`,config.introVisible===false));
-const attendanceDay=Number(config.attendanceDay||0);const doneAttendanceDay=Number(localStorage.getItem(`orangeExcelAttendanceDoneDay`)||0);if(config.attendanceEnabled&&[1,2,3].includes(attendanceDay)&&doneAttendanceDay!==attendanceDay){location.replace(`./attendance/`)}
-const openDays=[1,2,3].filter((day)=>!!config.dayVisibility[`day${day}`]);document.querySelector(`.days`)?.classList.toggle(`focused`,openDays.length===1);[1,2,3].forEach((day)=>{const open=openDays.includes(day);const card=document.getElementById(`dayCard${day}`),link=document.getElementById(`dayLink${day}`),status=card.querySelector(`.status`);card.classList.toggle(`available`,open);card.classList.toggle(`locked`,!open);card.style.display=openDays.length&&!open?`none`:``;link.style.display=open?`inline-flex`:`none`;status.textContent=open?`متاح الآن`:`غير متاح`});
-const assessOpen=!!config.assessmentEnabled&&[`pre`,`post`].includes(config.assessmentPhase);const assessmentBtn=document.getElementById(`assessmentBtn`);assessmentBtn.style.display=assessOpen?`inline-flex`:`none`;assessmentBtn.href=config.assessmentPhase===`post`?`./assessment/?mode=post`:`./assessment/?mode=pre`;document.getElementById(`assessmentText`).textContent=assessOpen?(config.assessmentPhase===`post`?`التقييم النهائي متاح الآن.`:`التقييم المبدئي متاح الآن.`):`سيتم فتح التقييم في الوقت المناسب.`;
-const announcement=document.getElementById(`announcement`);if(config.announcementEnabled&&config.announcementText){announcement.textContent=config.announcementText;announcement.classList.add(`show`)}
+let lastAttendanceRedirect=0;
+const applyConfig=(raw={})=>{
+  const config={...defaultConfig,...raw,dayVisibility:{...defaultConfig.dayVisibility,...(raw.dayVisibility||{})}};
+  if(config.resetNonce&&localStorage.getItem(`orangeExcelResetNonce`)!==config.resetNonce){
+    [`orangeExcelAttendanceDoneDay`,`orangeExcelParticipant`,`coderzOrangeParticipantName`].forEach((k)=>localStorage.removeItem(k));
+    Object.keys(localStorage).filter((k)=>k.startsWith(`orangePulse_`)).forEach((k)=>localStorage.removeItem(k));
+    localStorage.setItem(`orangeExcelResetNonce`,config.resetNonce);
+  }
+  const introHidden=config.introVisible===false;
+  document.querySelectorAll(`[data-intro-section]`).forEach((el)=>el.classList.toggle(`hidden`,introHidden));
+  document.querySelectorAll(`[data-intro-nav]`).forEach((el)=>el.classList.toggle(`hidden`,introHidden));
+
+  const attendanceDay=Number(config.attendanceDay||0);
+  const doneAttendanceDay=Number(localStorage.getItem(`orangeExcelAttendanceDoneDay`)||0);
+  if(config.attendanceEnabled&&[1,2,3].includes(attendanceDay)&&doneAttendanceDay!==attendanceDay){
+    const now=Date.now();if(now-lastAttendanceRedirect>3000){lastAttendanceRedirect=now;location.replace(`./attendance/`);return;}
+  }
+
+  const openDays=[1,2,3].filter((day)=>!!config.dayVisibility[`day${day}`]);
+  const activeDay=openDays[0]||0;
+  [1,2,3].forEach((day)=>{
+    const open=day===activeDay;
+    const card=document.getElementById(`dayCard${day}`),link=document.getElementById(`dayLink${day}`),status=card?.querySelector(`.status`);
+    if(!card||!link||!status)return;
+    card.style.display=activeDay&&!open?`none`:``;
+    card.classList.toggle(`available`,open);card.classList.toggle(`locked`,!open);
+    link.style.display=open?`inline-flex`:`none`;status.textContent=open?`متاح الآن`:`غير متاح`;
+  });
+
+  const assessOpen=!!config.assessmentEnabled&&[`pre`,`post`].includes(config.assessmentPhase);
+  const assessmentBtn=document.getElementById(`assessmentBtn`);
+  if(assessmentBtn){assessmentBtn.style.display=assessOpen?`inline-flex`:`none`;assessmentBtn.href=config.assessmentPhase===`post`?`./assessment/?mode=post`:`./assessment/?mode=pre`;}
+  const assessmentText=document.getElementById(`assessmentText`);
+  if(assessmentText)assessmentText.textContent=assessOpen?(config.assessmentPhase===`post`?`التقييم النهائي متاح الآن.`:`التقييم المبدئي متاح الآن.`):`سيتم فتح التقييم في الوقت المناسب.`;
+
+  const announcement=document.getElementById(`announcement`);
+  if(announcement){
+    const show=!!config.announcementEnabled&&!!config.announcementText;
+    announcement.textContent=show?config.announcementText:``;announcement.classList.toggle(`show`,show);
+  }
+};
+
+onSnapshot(doc(db,`orangeExcelConfig`,`site`),(snap)=>applyConfig(snap.exists()?snap.data():{}),(error)=>console.error(`Firebase config listener failed`,error));
 let taps=0,timer;document.getElementById(`secretAdmin`).addEventListener(`click`,()=>{taps+=1;clearTimeout(timer);timer=setTimeout(()=>taps=0,1400);if(taps>=5){location.href=`./assessment/admin/`;}});
 lucide.createIcons();
 </script>

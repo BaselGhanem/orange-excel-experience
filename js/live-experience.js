@@ -9,7 +9,7 @@
   const app=getApps().length?getApp():initializeApp(firebaseConfig);
   const db=getFirestore(app);
   const pageDay=Number((location.pathname.match(/day-(\d)/)||[])[1]||0);
-  const DEFAULT={activeDay:1,sessionLabel:`Session 1 of 4`,progress:0,now:`Welcome`,next:`Advanced Excel`,currentFile:``,pulse:{enabled:false,id:``,question:`كيف الوضع؟`},breakMode:{enabled:false,returnTime:``}};
+  const DEFAULT={currentFile:``,pulse:{enabled:false,id:``,question:`كيف الوضع؟`,options:[{value:`good`,label:`تمام 👍`},{value:`repeat`,label:`بدنا إعادة نقطة`},{value:`faster`,label:`ممكن أسرع شوي`}]},breakMode:{enabled:false,returnTime:``}};
   let live={...DEFAULT};
   const esc=(s)=>String(s??``).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   const visitorId=(()=>{let id=localStorage.getItem(`orangeExcelVisitorId`);if(!id){id=`v_${crypto.randomUUID()}`;localStorage.setItem(`orangeExcelVisitorId`,id)}return id})();
@@ -30,20 +30,25 @@
   document.querySelector(`[data-close="question"]`).onclick=()=>questionModal.classList.remove(`show`);
   questionModal.addEventListener(`click`,e=>{if(e.target===questionModal)questionModal.classList.remove(`show`)});
   $(`lxQuestionSend`).onclick=async()=>{const text=$(`lxQuestionText`).value.trim();if(!text)return;try{await addDoc(collection(db,`orangeExcelQuestions`),{text,visitorId,page:location.pathname,createdAt:serverTimestamp(),status:`new`});$(`lxQuestionText`).value=``;questionModal.classList.remove(`show`);toast(`تم إرسال سؤالك`)}catch(e){console.error(`Question submission failed`,e);toast(`تعذر إرسال السؤال — تحقق من Firestore Rules`)}};
-  const pulseOptions=[[`good`,`تمام 👍`],[`repeat`,`بدنا إعادة نقطة`],[`faster`,`ممكن أسرع شوي`]];
+  
   const renderPulse=()=>{
     const p=live.pulse||{};if(!p.enabled||!p.id){pulseModal.classList.remove(`show`);return}
     const key=`orangePulse_${p.id}`;const answered=localStorage.getItem(key);
     $(`lxPulseQuestion`).textContent=p.question||`كيف الوضع؟`;
     if(answered){$(`lxPulseBody`).innerHTML=`<div class="lx-pulse-done">تم تسجيل إجابتك ✓</div>`;pulseModal.classList.remove(`show`);return}
-    $(`lxPulseBody`).innerHTML=pulseOptions.map(([v,l])=>`<button class="lx-pulse-option" data-pulse="${v}">${l}</button>`).join(``);
+    const options=Array.isArray(p.options)&&p.options.length?p.options:DEFAULT.pulse.options;$(`lxPulseBody`).innerHTML=options.map((o)=>`<button class="lx-pulse-option" data-pulse="${esc(o.value)}">${esc(o.label)}</button>`).join(``);
     $(`lxPulseBody`).querySelectorAll(`[data-pulse]`).forEach(btn=>btn.onclick=async()=>{try{await setDoc(doc(db,`orangeExcelPulseResponses`,`${p.id}_${visitorId}`),{pulseId:p.id,answer:btn.dataset.pulse,visitorId,createdAt:serverTimestamp()});localStorage.setItem(key,btn.dataset.pulse);pulseModal.classList.remove(`show`);toast(`شكراً — وصلت للمدرب`)}catch(e){console.error(`Pulse submission failed`,e);toast(`تعذر تسجيل الإجابة — تحقق من Firestore Rules`)}});
     pulseModal.classList.add(`show`);
   };
   let breakTimer=null;
-  const renderBreak=()=>{const b=live.breakMode||{};$(`lxBreak`).classList.toggle(`show`,!!b.enabled);$(`lxBreakTime`).textContent=b.returnTime?`Back at ${esc(b.returnTime)}`:``;clearInterval(breakTimer);if(!b.enabled||!b.returnTime){$(`lxBreakCountdown`).textContent=``;return}const tick=()=>{const [h,m]=b.returnTime.split(`:`).map(Number);const now=new Date();const target=new Date();target.setHours(h,m,0,0);if(target<now)target.setDate(target.getDate()+1);const diff=Math.max(0,target-now);const mm=Math.floor(diff/60000),ss=Math.floor((diff%60000)/1000);$(`lxBreakCountdown`).textContent=`${String(mm).padStart(2,`0`)}:${String(ss).padStart(2,`0`)}`};tick();breakTimer=setInterval(tick,1000)};
+  const formatTime12=(value)=>{const [h,m]=String(value||``).split(`:`).map(Number);if(!Number.isFinite(h)||!Number.isFinite(m))return String(value||``);const period=h>=12?`PM`:`AM`;const hour=h%12||12;return `${hour}:${String(m).padStart(2,`0`)} ${period}`};
+  const renderBreak=()=>{const b=live.breakMode||{};$(`lxBreak`).classList.toggle(`show`,!!b.enabled);$(`lxBreakTime`).textContent=b.returnTime?`Back at ${esc(formatTime12(b.returnTime))}`:``;clearInterval(breakTimer);if(!b.enabled||!b.returnTime){$(`lxBreakCountdown`).textContent=``;return}const tick=()=>{const [h,m]=b.returnTime.split(`:`).map(Number);const now=new Date();const target=new Date();target.setHours(h,m,0,0);if(target<now)target.setDate(target.getDate()+1);const diff=Math.max(0,target-now);const mm=Math.floor(diff/60000),ss=Math.floor((diff%60000)/1000);$(`lxBreakCountdown`).textContent=`${String(mm).padStart(2,`0`)}:${String(ss).padStart(2,`0`)}`};tick();breakTimer=setInterval(tick,1000)};
   const highlightFile=()=>{document.querySelectorAll(`.file`).forEach(el=>el.classList.remove(`lx-file-current`));if(!live.currentFile)return;const el=document.getElementById(live.currentFile);if(el){el.classList.add(`lx-file-current`);if(!el.classList.contains(`show`))el.classList.add(`show`)}};
-  const render=()=>{$(`lxSession`).textContent=`DAY ${live.activeDay||1} • ${live.sessionLabel||`LIVE TRAINING`}`;$(`lxProgress`).style.width=`${Math.min(100,Math.max(0,Number(live.progress)||0))}%`;$(`lxNow`).textContent=live.now||`—`;$(`lxNext`).textContent=live.next||`—`;highlightFile();renderPulse();renderBreak()};
-  onSnapshot(doc(db,`orangeExcelConfig`,`site`),(snap)=>{const raw=snap.exists()?snap.data():{};live={...DEFAULT,...(raw.liveExperience||{}),pulse:{...DEFAULT.pulse,...(raw.liveExperience?.pulse||{})},breakMode:{...DEFAULT.breakMode,...(raw.liveExperience?.breakMode||{})}};render()});
+  let configuredDay=1;
+  const getAutoProgress=()=>{const now=new Date();const start=new Date(now);start.setHours(9,0,0,0);const end=new Date(now);end.setHours(15,0,0,0);const total=end-start;const elapsed=now-start;const progress=Math.max(0,Math.min(100,(elapsed/total)*100));let nowText=`Training in progress`;let nextText=``;if(now<start){nowText=`Before training`;nextText=`Starts at 9:00 AM`}else if(now>=end){nowText=`Training day complete`;nextText=`Completed`}else{const mins=Math.ceil((end-now)/60000);const h=Math.floor(mins/60),m=mins%60;nextText=h?`${h}h ${m}m remaining`:`${m}m remaining`}return{progress,nowText,nextText,time:now.toLocaleTimeString([], {hour:`2-digit`,minute:`2-digit`})}};
+  const renderAutoProgress=()=>{const a=getAutoProgress();const day=pageDay||configuredDay||1;$(`lxSession`).textContent=`DAY ${day} • 09:00 AM – 03:00 PM`;$(`lxProgress`).style.width=`${a.progress}%`;$(`lxNow`).textContent=`${a.time} • ${Math.round(a.progress)}%`;$(`lxNext`).textContent=a.nextText};
+  const render=()=>{renderAutoProgress();highlightFile();renderPulse();renderBreak()};
+  onSnapshot(doc(db,`orangeExcelConfig`,`site`),(snap)=>{const raw=snap.exists()?snap.data():{};const openDay=[1,2,3].find((day)=>raw.dayVisibility?.[`day${day}`]);configuredDay=openDay||configuredDay||1;live={...DEFAULT,...(raw.liveExperience||{}),pulse:{...DEFAULT.pulse,...(raw.liveExperience?.pulse||{})},breakMode:{...DEFAULT.breakMode,...(raw.liveExperience?.breakMode||{})}};render()});
+  setInterval(renderAutoProgress,15000);
   let heartbeatWarned=false;const heartbeat=async()=>{try{await setDoc(doc(db,`orangeExcelPresence`,visitorId),{visitorId,page:location.pathname,day:pageDay,lastSeen:serverTimestamp()},{merge:true});heartbeatWarned=false}catch(e){if(!heartbeatWarned){console.warn(`Presence heartbeat blocked. Publish the updated Firestore rules.`,e);heartbeatWarned=true}}};heartbeat();setInterval(heartbeat,45000);
 })();

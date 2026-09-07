@@ -1,4 +1,4 @@
-const sourceUrl = new URL(`./app.status-source.js?v=20260907_order_type_filter_v2`, import.meta.url);
+const sourceUrl = new URL(`./workflow.status-source.js?v=20260907_order_type_filter_v2`, import.meta.url);
 const firebaseUrl = new URL(`./firebase.js`, import.meta.url).href;
 
 const readyListeners = [];
@@ -8,8 +8,6 @@ const originalListeners = readyTargets.map(target => ({
     addEventListener: target.addEventListener
 }));
 
-// Capture DOMContentLoaded handlers while the original module is being loaded.
-// This prevents the async source transformation from missing page initialization.
 originalListeners.forEach(({ target, addEventListener }) => {
     target.addEventListener = function(type, listener, options) {
         if (type === `DOMContentLoaded`) {
@@ -23,64 +21,38 @@ originalListeners.forEach(({ target, addEventListener }) => {
 let moduleUrl = ``;
 try {
     const response = await fetch(sourceUrl);
-    if (!response.ok) throw new Error(`Unable to load application source: ${response.status}`);
+    if (!response.ok) throw new Error(`Unable to load workflow source: ${response.status}`);
 
     let source = await response.text();
-    const resolverPattern = /function getEffectiveOrderStatus\(order = \{\}\) \{[\s\S]*?\n\}/;
-    const canonicalResolver = `function getEffectiveOrderStatus(order = {}) {
-    const rawStatus = order.status || order.workflowStage || order.supervisorStatus ||
+    const rawResolverPattern = /function getRawPrimaryStatus\(order = \{\}\) \{[\s\S]*?\n\}/;
+    const primaryResolverPattern = /function getPrimaryStatus\(order = \{\}\) \{[\s\S]*?\n\}/;
+    const canonicalRawResolver = `function getRawPrimaryStatus(order = {}) {
+    return order.status || order.workflowStage || order.supervisorStatus ||
         order.marketManagerStatus || order.financeStatus || order.orderStaffStatus || '';
+}`;
+    const canonicalPrimaryResolver = `function getPrimaryStatus(order = {}) {
+    const rawStatus = getRawPrimaryStatus(order);
     const terminalOrReturned = rawStatus.startsWith('deleted_') ||
         ['returned_to_rep', 'returned_to_supervisor', 'returned_to_market_manager', 'returned_to_finance',
             'market_manager_rejected', 'finance_rejected', 'rejected'].includes(rawStatus);
     if (terminalOrReturned || order.workflowStage === 'deleted') return rawStatus;
     if (rawStatus === 'orders_staff_hidden' || rawStatus === 'orders_staff_exported' ||
-        order.orderStaffStatus === 'orders_staff_exported' || appOrderHasHiddenInvoiceEvidence(order)) {
+        order.orderStaffStatus === 'orders_staff_exported' || orderHasHiddenInvoiceEvidence(order)) {
         return 'orders_staff_hidden';
     }
     return rawStatus;
 }`;
 
-    const supervisorDeletePattern = /function canCurrentSupervisorDeleteOrder\(order = \{\}\) \{[\s\S]*?\n\}/;
-    const supervisorDeleteResolver = `function canCurrentSupervisorDeleteOrder(order = {}) {
-    const status = getEffectiveOrderStatus(order) || 'pending_supervisor_approval';
-    if (isDeletedOrderStatus(status)) return false;
-
-    const ownerOk = isOrderUnderCurrentManager(order) || isOrderWithoutAssignedSupervisor(order);
-    if (!ownerOk) return false;
-
-    const deletableStatuses = [
-        'pending',
-        'pending_supervisor_approval',
-        'returned_to_rep',
-        'returned_to_supervisor',
-        'finance_rejected'
-    ];
-
-    return deletableStatuses.includes(status);
-}`;
-
-    if (!resolverPattern.test(source)) {
-        throw new Error(`Status resolver was not found in application source.`);
-    }
-    if (!supervisorDeletePattern.test(source)) {
-        throw new Error(`Supervisor delete permission resolver was not found in application source.`);
+    if (!rawResolverPattern.test(source) || !primaryResolverPattern.test(source)) {
+        throw new Error(`Status resolver was not found in workflow source.`);
     }
 
-    source = source.replace(resolverPattern, canonicalResolver);
-    source = source.replace(supervisorDeletePattern, supervisorDeleteResolver);
+    source = source.replace(rawResolverPattern, canonicalRawResolver);
+    source = source.replace(primaryResolverPattern, canonicalPrimaryResolver);
     source = source.replace(/from\s+(['"])\.\/firebase\.js\1/, `from ${JSON.stringify(firebaseUrl)}`);
     source = source.replace(
         `deleted_by_orders_staff: 'محذوفة من فريق المعالجة'`,
         `deleted_by_orders_staff: 'محذوفة من قسم الطلبيات'`
-    );
-    source = source.replace(
-        'حذف المشرف مسموح فقط قبل موافقة المشرف. بعد الموافقة استخدم الإرجاع حسب مسار العمل.',
-        'لا يمكن للمشرف حذف الطلبية في حالتها الحالية.'
-    );
-    source = source.replace(
-        'تم حذف الطلبيات المسموح حذفها فقط. تم تجاوز ${skipped.length} طلبية لأنها ليست قبل موافقة المشرف.',
-        'تم حذف الطلبيات المسموح حذفها فقط. تم تجاوز ${skipped.length} طلبية لأن حالتها الحالية غير مسموح حذفها للمشرف.'
     );
 
     if (!source.includes(`orders_staff_edited_returned_to_finance: 'تم تعديله وإرجاعه للمالية'`)) {
@@ -101,12 +73,10 @@ try {
 }
 
 if (document.readyState === `loading`) {
-    // The real event has not fired yet: register every captured handler normally.
     readyListeners.forEach(({ target, listener, options }) => {
         target.addEventListener(`DOMContentLoaded`, listener, options);
     });
 } else {
-    // The event fired during the async import: execute the captured handlers once now.
     const readyEvent = new Event(`DOMContentLoaded`, { bubbles: true, cancelable: false });
     readyListeners.forEach(({ target, listener }) => {
         try {

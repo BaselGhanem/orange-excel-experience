@@ -1,0 +1,9 @@
+IMPORTANT — Firebase Console action required
+
+The live training features use these Firestore collections:
+- orangeExcelQuestions
+- orangeExcelPulseResponses
+- orangeExcelPresence
+
+Uploading this project to GitHub does NOT publish Firestore security rules.
+Open Firebase Console > Firestore Database > Rules, replace the current rules with assessment/firestore.rules, then click Publish.

@@ -29,7 +29,7 @@
   $(`lxQuestionBtn`).onclick=()=>questionModal.classList.add(`show`);
   document.querySelector(`[data-close="question"]`).onclick=()=>questionModal.classList.remove(`show`);
   questionModal.addEventListener(`click`,e=>{if(e.target===questionModal)questionModal.classList.remove(`show`)});
-  $(`lxQuestionSend`).onclick=async()=>{const text=$(`lxQuestionText`).value.trim();if(!text)return;await addDoc(collection(db,`orangeExcelQuestions`),{text,visitorId,page:location.pathname,createdAt:serverTimestamp(),status:`new`});$(`lxQuestionText`).value=``;questionModal.classList.remove(`show`);toast(`تم إرسال سؤالك`)};
+  $(`lxQuestionSend`).onclick=async()=>{const text=$(`lxQuestionText`).value.trim();if(!text)return;try{await addDoc(collection(db,`orangeExcelQuestions`),{text,visitorId,page:location.pathname,createdAt:serverTimestamp(),status:`new`});$(`lxQuestionText`).value=``;questionModal.classList.remove(`show`);toast(`تم إرسال سؤالك`)}catch(e){console.error(`Question submission failed`,e);toast(`تعذر إرسال السؤال — تحقق من Firestore Rules`)}};
   const pulseOptions=[[`good`,`تمام 👍`],[`repeat`,`بدنا إعادة نقطة`],[`faster`,`ممكن أسرع شوي`]];
   const renderPulse=()=>{
     const p=live.pulse||{};if(!p.enabled||!p.id){pulseModal.classList.remove(`show`);return}
@@ -37,7 +37,7 @@
     $(`lxPulseQuestion`).textContent=p.question||`كيف الوضع؟`;
     if(answered){$(`lxPulseBody`).innerHTML=`<div class="lx-pulse-done">تم تسجيل إجابتك ✓</div>`;pulseModal.classList.remove(`show`);return}
     $(`lxPulseBody`).innerHTML=pulseOptions.map(([v,l])=>`<button class="lx-pulse-option" data-pulse="${v}">${l}</button>`).join(``);
-    $(`lxPulseBody`).querySelectorAll(`[data-pulse]`).forEach(btn=>btn.onclick=async()=>{await setDoc(doc(db,`orangeExcelPulseResponses`,`${p.id}_${visitorId}`),{pulseId:p.id,answer:btn.dataset.pulse,visitorId,createdAt:serverTimestamp()});localStorage.setItem(key,btn.dataset.pulse);pulseModal.classList.remove(`show`);toast(`شكراً — وصلت للمدرب`)});
+    $(`lxPulseBody`).querySelectorAll(`[data-pulse]`).forEach(btn=>btn.onclick=async()=>{try{await setDoc(doc(db,`orangeExcelPulseResponses`,`${p.id}_${visitorId}`),{pulseId:p.id,answer:btn.dataset.pulse,visitorId,createdAt:serverTimestamp()});localStorage.setItem(key,btn.dataset.pulse);pulseModal.classList.remove(`show`);toast(`شكراً — وصلت للمدرب`)}catch(e){console.error(`Pulse submission failed`,e);toast(`تعذر تسجيل الإجابة — تحقق من Firestore Rules`)}});
     pulseModal.classList.add(`show`);
   };
   let breakTimer=null;
@@ -45,5 +45,5 @@
   const highlightFile=()=>{document.querySelectorAll(`.file`).forEach(el=>el.classList.remove(`lx-file-current`));if(!live.currentFile)return;const el=document.getElementById(live.currentFile);if(el){el.classList.add(`lx-file-current`);if(!el.classList.contains(`show`))el.classList.add(`show`)}};
   const render=()=>{$(`lxSession`).textContent=`DAY ${live.activeDay||1} • ${live.sessionLabel||`LIVE TRAINING`}`;$(`lxProgress`).style.width=`${Math.min(100,Math.max(0,Number(live.progress)||0))}%`;$(`lxNow`).textContent=live.now||`—`;$(`lxNext`).textContent=live.next||`—`;highlightFile();renderPulse();renderBreak()};
   onSnapshot(doc(db,`orangeExcelConfig`,`site`),(snap)=>{const raw=snap.exists()?snap.data():{};live={...DEFAULT,...(raw.liveExperience||{}),pulse:{...DEFAULT.pulse,...(raw.liveExperience?.pulse||{})},breakMode:{...DEFAULT.breakMode,...(raw.liveExperience?.breakMode||{})}};render()});
-  const heartbeat=async()=>{try{await setDoc(doc(db,`orangeExcelPresence`,visitorId),{visitorId,page:location.pathname,day:pageDay,lastSeen:serverTimestamp()},{merge:true})}catch(e){console.warn(e)}};heartbeat();setInterval(heartbeat,45000);
+  let heartbeatWarned=false;const heartbeat=async()=>{try{await setDoc(doc(db,`orangeExcelPresence`,visitorId),{visitorId,page:location.pathname,day:pageDay,lastSeen:serverTimestamp()},{merge:true});heartbeatWarned=false}catch(e){if(!heartbeatWarned){console.warn(`Presence heartbeat blocked. Publish the updated Firestore rules.`,e);heartbeatWarned=true}}};heartbeat();setInterval(heartbeat,45000);
 })();

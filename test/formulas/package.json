@@ -1,0 +1,7 @@
+{
+  "name": "formula-motion",
+  "private": true,
+  "version": "8.0.0",
+  "type": "module",
+  "description": "Verified result-integrity motion-learning platform for Excel formulas"
+}

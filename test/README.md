@@ -1,0 +1,99 @@
+# Formula Motion
+
+A cinematic, data-driven Excel formula learning experience built with semantic HTML, modular CSS, and vanilla JavaScript.
+
+## Included formula modules
+
+1. SUMIFS — aggregation / matching / value-combination motion
+2. XLOOKUP — search / locate / retrieve motion
+3. COUNTIFS — criteria scan / match / count motion
+4. IF — binary decision / TRUE-FALSE branching motion
+5. IFS — ordered thresholds / first-TRUE routing motion
+6. FILTER — Boolean filtering / dynamic-array spill motion
+
+Every formula contains a complete Basic Mode and Hard Mode sequence, its own dataset, syntax anatomy, formula assembly, result reveal, and visual identity.
+
+## Interaction model
+
+Formula Motion v5 uses a **Smart Director** model: the trainer controls the important beats, while micro-motions inside each beat choreograph themselves.
+
+- Click anywhere inside the execution Stage to continue; the footer button is optional.
+- `ArrowRight` or `ArrowDown` launches the next meaningful beat.
+- `ArrowLeft` or `ArrowUp` reconstructs the previous meaningful beat.
+- The syntax is grouped intelligently: punctuation and individual tokens animate automatically inside one syntax reveal instead of requiring separate clicks.
+- Argument cards cascade automatically inside one anatomy action.
+- The training dataset and task reveal automatically when entering the worked example; showing the table never costs an extra click.
+- Formula-specific logic is grouped into meaningful actions. For example, SUMIFS uses `Map ranges + criteria`, `Lock matching rows`, and `Combine + reveal result`.
+- Basic-result presentation, dataset transitions, and the Hard Mode switch are cinematic continuations of the action that launched them rather than standalone click gates.
+- `Back` moves between meaningful interaction states instead of every micro-animation.
+- `Restart` returns the active formula to its first untouched scene.
+- Buttons still use click ripple / press choreography, and Stage clicks create their own localized motion wave.
+- Fine-pointer devices keep the custom cursor, spotlight, subtle stage tilt, ambient parallax, and magnetic controls.
+
+## Premium formula library
+
+The browser-native select control has been replaced with a custom formula library. Each formula shows its sequence number, motion identity, formula name, formula-specific accent, active state, and animated selection feedback.
+
+## Layout resilience
+
+Scenes now participate in the Stage layout instead of depending on a fixed-height absolute canvas. The Stage grows with scene content while preserving crossfades, preventing titles, syntax cards, tables, and worked-example panels from collapsing into one another on shorter or narrower viewports.
+
+## Loader
+
+The opening loader uses the concept `هكرنا الإكسل`, a geek-terminal treatment (`⌐■_■ / hehe.exe`), formula traces, scan energy, and a user-triggered `ENTER THE LAB` transition.
+
+## Run locally
+
+Because the site uses native ES modules, serve the folder through any static web server instead of opening `index.html` directly.
+
+```bash
+python3 -m http.server 8080
+```
+
+Then open `http://localhost:8080`.
+
+Formula modules can also be opened directly with query parameters:
+
+```text
+?formula=sumifs
+?formula=xlookup
+?formula=countifs
+?formula=if
+?formula=ifs
+?formula=filter
+```
+
+## Architecture
+
+- `index.html` — semantic application shell, loader, formula library, motion controls
+- `css/design-system.css` — shared design tokens and global foundations
+- `css/app.css` — motion system, formula identities, tables, pointer system, loader, controls, responsive behavior
+- `js/core/engine.js` — reusable smart-action rendering/sequencing engine, micro-step batching, and visual primitives
+- `js/formulas/*.js` — independent formula configuration/modules
+- `js/formulas/index.js` — formula registry
+- `js/app.js` — navigation, formula picker, Stage-wide click control, keyboard arrows, pointer choreography, loader, deep-link state
+
+## Adding another formula
+
+1. Create a module under `js/formulas/` using the same configuration structure.
+2. Register it in `js/formulas/index.js`.
+3. Reuse an existing visual primitive (`aggregate`, `lookup`, `count`, `logic`, `threshold`, `filter`) or add a new primitive when the teaching behavior genuinely requires it.
+
+## Accessibility & performance
+
+- Semantic tables with persistent visible column headers.
+- `aria-live` for scene and mode captions.
+- Keyboard-focus states for user-facing controls.
+- Escape closes the custom formula library.
+- `prefers-reduced-motion` support.
+- Transform/opacity-led animations for smooth rendering.
+- No external JavaScript libraries or runtime dependencies.
+
+
+## v5 — Argument Beat Director
+- Every syntax argument requires one user action; punctuation after it reveals automatically inside the same beat.
+- Formula identity and syntax shell arrive automatically; the dataset/task are contextual transitions, not click gates.
+- Arrow keys and click-anywhere stage control remain supported.
+- Desktop showcase layout is constrained to one `100dvh` viewport with no document scroll.
+- Optional synthesized Web Audio motion cues are built in with a SOUND ON/OFF control; no external audio files are required.
+- XLOOKUP syntax anatomy now explicitly includes `search_mode` as its sixth argument.

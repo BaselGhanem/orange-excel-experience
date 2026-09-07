@@ -12,18 +12,18 @@ const CONFIG_DOC=`site`;
 const SESSION=`coderzOrangeAdminSession`;
 const PIN_HASH=`9060ce5653093cd9bff480cb01ff0e3a790e6f545e214a3dd85841daabac7848`;
 const FILES={
-  d1f1:{day:1,title:`Advanced Formulas & Logical Functions`,sub:`Customer Care / Operations`},
-  d1f2:{day:1,title:`XLOOKUP & Dynamic Arrays`,sub:`HR`},
-  d1f3:{day:1,title:`Advanced Text & Date Functions`,sub:`Cross-Department`},
-  d1f4:{day:1,title:`Day 1 Integrated Assignment`,sub:`Team Practice`},
-  d2f1:{day:2,title:`PivotTable — 20-Second Report`,sub:`Commercial / Management`},
-  d2f2:{day:2,title:`Power Query Data Factory`,sub:`Cross-Department`},
-  d2f3:{day:2,title:`Power Query Source Pack`,sub:`ZIP Source Files`},
-  d2f4:{day:2,title:`Network Alert Engine`,sub:`Network / Technical Operations`},
-  d2f5:{day:2,title:`Day 2 Final Challenge`,sub:`Integrated Practice`},
-  d3f1:{day:3,title:`Interactive Dashboard`,sub:`Commercial / Management`},
-  d3f2:{day:3,title:`Macros + Protection`,sub:`Finance / Back Office`},
-  d3f3:{day:3,title:`Final Executive Dashboard Challenge`,sub:`Final Course Challenge`}
+  d1f1:{day:1,title:`Advanced Formulas & Logical Functions`,sub:`Customer Care / Operations`,download:`../../downloads/day1/01_Advanced_Formulas_Logical_Functions_CODERZ_DAY1_CUSTOMER_CARE_FINAL.xlsx`},
+  d1f2:{day:1,title:`XLOOKUP & Dynamic Arrays`,sub:`HR`,download:`../../downloads/day1/02_XLOOKUP_Dynamic_Arrays_CODERZ_DAY1_HR_FINAL.xlsx`},
+  d1f3:{day:1,title:`Advanced Text & Date Functions`,sub:`Cross-Department`,download:`../../downloads/day1/03_Advanced_Text_Date_Functions_CODERZ_DAY1_FINAL.xlsx`},
+  d1f4:{day:1,title:`Day 1 Integrated Assignment`,sub:`Team Practice`,download:`../../downloads/day1/04_Day1_Integrated_Assignment_CODERZ.xlsx`},
+  d2f1:{day:2,title:`PivotTable — 20-Second Report`,sub:`Commercial / Management`,download:`../../downloads/day2/05_Pivot_Table_CODERZ_TRAINER_STYLE.xlsx`},
+  d2f2:{day:2,title:`Power Query Data Factory`,sub:`Cross-Department`,download:`../../downloads/day2/06_Power_Query_Data_Factory_CODERZ_DAY_2.xlsx`},
+  d2f3:{day:2,title:`Power Query Source Pack`,sub:`ZIP Source Files`,download:`../../downloads/day2/DAY2_Power_Query_Source_Pack.zip`},
+  d2f4:{day:2,title:`Network Alert Engine`,sub:`Network / Technical Operations`,download:`../../downloads/day2/07_Conditional_Formatting_Alert_Engine_CODERZ_DAY_2_NETWORK_FINAL.xlsx`},
+  d2f5:{day:2,title:`Day 2 Final Challenge`,sub:`Integrated Practice`,download:null},
+  d3f1:{day:3,title:`Interactive Dashboard`,sub:`Commercial / Management`,download:`../../downloads/day3/09_Interactive_Dashboard_CODERZ_DAY_3_EASY.xlsx`},
+  d3f2:{day:3,title:`Macros + Protection`,sub:`Finance / Back Office`,download:`../../downloads/day3/10_Macros_Automation_Protection_CODERZ_DAY_3_FINANCE_FINAL.xlsx`},
+  d3f3:{day:3,title:`Final Executive Dashboard Challenge`,sub:`Final Course Challenge`,download:`../../downloads/day3/11_Final_Executive_Dashboard_Challenge_CODERZ_DAY_3_EASY.xlsx`}
 };
 const DAY_INFO={1:{title:`Day 1`,sub:`Formulas • XLOOKUP • Text & Dates`},2:{title:`Day 2`,sub:`PivotTables • Power Query • Alerts`},3:{title:`Day 3`,sub:`Dashboards • Automation • Final Challenge`}};
 const DEFAULT_FILES=Object.fromEntries(Object.keys(FILES).map((id)=>[id,false]));
@@ -42,7 +42,7 @@ const countOpenFiles=()=>Object.values(config.files).filter(Boolean).length;
 const renderStatus=()=>{if($(`statusDays`))$(`statusDays`).textContent=`${countOpenDays()} Days Open`;if($(`statusFiles`))$(`statusFiles`).textContent=`${countOpenFiles()} Files Open`;if($(`statusAssessment`))$(`statusAssessment`).textContent=config.assessmentEnabled?config.assessmentPhase.toUpperCase():`CLOSED`;if($(`statusAttendance`))$(`statusAttendance`).textContent=config.attendanceEnabled?`Attendance D${config.attendanceDay}`:`Attendance OFF`};
 const toggleDay=async(day,open)=>{const dayVisibility={...config.dayVisibility,[`day${day}`]:open};await save({dayVisibility},open?`${DAY_INFO[day].title} ظاهر الآن`:`${DAY_INFO[day].title} مخفي`)};
 const toggleFile=async(id,open)=>{const files={...config.files,[id]:open};await save({files},open?`تم إظهار الملف`:`تم إخفاء الملف`)};
-const renderDays=()=>{const box=$(`dayCards`);if(!box)return;box.innerHTML=``;[1,2,3].forEach((day)=>{const open=!!config.dayVisibility[`day${day}`];const card=document.createElement(`article`);card.className=`day-card${open?` open`:``}`;const rows=Object.entries(FILES).filter(([,f])=>f.day===day).map(([id,f])=>`<div class="file-row"><div><b>${f.title}</b><small>${f.sub}</small></div><label class="switch"><input type="checkbox" data-file="${id}" ${config.files[id]?`checked`:``}><span class="slider"></span></label></div>`).join(``);card.innerHTML=`<div class="day-head"><div><h2>${DAY_INFO[day].title}</h2><p>${DAY_INFO[day].sub}</p></div><label class="switch"><input type="checkbox" data-day="${day}" ${open?`checked`:``}><span class="slider"></span></label></div><a class="day-link" href="../../day-${day}/" target="_blank"><span>فتح رابط ${DAY_INFO[day].title}</span><i data-lucide="external-link" size="13"></i></a><div class="files">${rows}</div>`;box.appendChild(card)});box.querySelectorAll(`[data-day]`).forEach((input)=>input.addEventListener(`change`,()=>toggleDay(Number(input.dataset.day),input.checked)));box.querySelectorAll(`[data-file]`).forEach((input)=>input.addEventListener(`change`,()=>toggleFile(input.dataset.file,input.checked)));lucide.createIcons()};
+const renderDays=()=>{const box=$(`dayCards`);if(!box)return;box.innerHTML=``;[1,2,3].forEach((day)=>{const open=!!config.dayVisibility[`day${day}`];const card=document.createElement(`article`);card.className=`day-card${open?` open`:``}`;const rows=Object.entries(FILES).filter(([,f])=>f.day===day).map(([id,f])=>{const downloadControl=f.download?`<a class="file-download" href="${f.download}" download title="Download" aria-label="Download ${f.title}"><i data-lucide="download" size="15"></i></a>`:`<span class="file-download disabled" title="Download file is not included in this package" aria-label="Download unavailable"><i data-lucide="download" size="15"></i></span>`;return `<div class="file-row"><div class="file-copy"><b>${f.title}</b><small>${f.sub}</small></div><div class="file-controls">${downloadControl}<label class="switch"><input type="checkbox" data-file="${id}" ${config.files[id]?`checked`:``}><span class="slider"></span></label></div></div>`}).join(``);card.innerHTML=`<div class="day-head"><div><h2>${DAY_INFO[day].title}</h2><p>${DAY_INFO[day].sub}</p></div><label class="switch"><input type="checkbox" data-day="${day}" ${open?`checked`:``}><span class="slider"></span></label></div><a class="day-link" href="../../day-${day}/" target="_blank"><span>فتح رابط ${DAY_INFO[day].title}</span><i data-lucide="external-link" size="13"></i></a><div class="files">${rows}</div>`;box.appendChild(card)});box.querySelectorAll(`[data-day]`).forEach((input)=>input.addEventListener(`change`,()=>toggleDay(Number(input.dataset.day),input.checked)));box.querySelectorAll(`[data-file]`).forEach((input)=>input.addEventListener(`change`,()=>toggleFile(input.dataset.file,input.checked)));lucide.createIcons()};
 const setAssessment=async(mode)=>save({assessmentPhase:mode,assessmentEnabled:mode!==`closed`},mode===`pre`?`PRE مفتوح`:mode===`post`?`POST مفتوح`:`التقييم مغلق`);
 const renderAssessment=()=>{const phase=config.assessmentEnabled?config.assessmentPhase:`closed`;document.querySelectorAll(`[data-assess]`).forEach((b)=>b.classList.toggle(`active`,b.dataset.assess===phase))};
 const setAttendance=async(day)=>{await save({attendanceEnabled:true,attendanceDay:day},`تم فتح حضور Day ${day}`);await loadAttendance()};

@@ -58,13 +58,11 @@ const applyConfig=(raw={})=>{
     const now=Date.now();if(now-lastAttendanceRedirect>3000){lastAttendanceRedirect=now;location.replace(`./attendance/`);return;}
   }
 
-  const openDays=[1,2,3].filter((day)=>!!config.dayVisibility[`day${day}`]);
-  const activeDay=openDays[0]||0;
   [1,2,3].forEach((day)=>{
-    const open=day===activeDay;
+    const open=!!config.dayVisibility[`day${day}`];
     const card=document.getElementById(`dayCard${day}`),link=document.getElementById(`dayLink${day}`),status=card?.querySelector(`.status`);
     if(!card||!link||!status)return;
-    card.style.display=activeDay&&!open?`none`:``;
+    card.style.display=``;
     card.classList.toggle(`available`,open);card.classList.toggle(`locked`,!open);
     link.style.display=open?`inline-flex`:`none`;status.textContent=open?`متاح الآن`:`غير متاح`;
   });
